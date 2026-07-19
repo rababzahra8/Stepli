@@ -10,6 +10,8 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.LinearLayout
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.TextView
 
 /** Renderer only. It does not and cannot interact with Foodpanda. */
@@ -19,7 +21,7 @@ object StepliOverlayService {
     // The highlight covers the whole display, so it must never receive touches.
     // Without FLAG_NOT_TOUCHABLE it blocks taps on the Foodpanda UI below it.
     ring=HighlightRingView(c); wm?.addView(ring,WindowManager.LayoutParams(-1,-1,type,flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,-3))
-    val box=LinearLayout(c).apply { orientation=LinearLayout.VERTICAL; setPadding(22,18,22,18); background=round(Color.rgb(251,246,233),22) }
+    val box=LinearLayout(c).apply { orientation=LinearLayout.VERTICAL; setPadding(22,18,22,18); background=round(Color.rgb(168,195,160),22) }
     val header=LinearLayout(c).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL }
     header.addView(TextView(c).apply { text=s.progress; setTextColor(Color.rgb(110,139,114)); textSize=13f },LinearLayout.LayoutParams(0,-2,1f))
     val close=TextView(c).apply { text="×"; textSize=28f; gravity=Gravity.CENTER; setTextColor(Color.rgb(40,68,53)); contentDescription="Close guidance card" }
@@ -27,7 +29,8 @@ object StepliOverlayService {
     box.addView(header)
     box.addView(TextView(c).apply { text=s.text; setTextColor(Color.rgb(40,68,53)); textSize=18f; setPadding(0,8,0,14) })
     box.addView(TextView(c).apply { text="🎙  ${s.confirm}"; setTextColor(Color.WHITE); textSize=16f; gravity=Gravity.CENTER; setPadding(14,14,14,14); background=round(Color.rgb(200,109,69),14); setOnClickListener { StepliAccessibilityService.emitStepConfirmed(s.id) } })
-    val bubble=TextView(c).apply { text="S"; textSize=22f; gravity=Gravity.CENTER; setTextColor(Color.WHITE); setPadding(0,0,0,0); background=round(Color.rgb(110,139,114),28); contentDescription="Show or hide Stepli guidance" }
+    val bubble=FrameLayout(c).apply { background=round(Color.rgb(168,195,160),28); contentDescription="Show or hide Stepli guidance" }
+    bubble.addView(ImageView(c).apply { setImageResource(R.drawable.stepli_bot); scaleType=ImageView.ScaleType.FIT_CENTER },FrameLayout.LayoutParams(dp(c,46),dp(c,46),Gravity.CENTER))
     val container=LinearLayout(c).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.END; addView(box,LinearLayout.LayoutParams(dp(c,300),-2).apply { bottomMargin=dp(c,10) }); addView(bubble,LinearLayout.LayoutParams(dp(c,56),dp(c,56))) }
     close.setOnClickListener { box.visibility=View.GONE }
     val slop=ViewConfiguration.get(c).scaledTouchSlop

@@ -1,0 +1,4 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/stepli_background" />
+    <item android:drawable="@drawable/stepli_bot" android:gravity="center" />
+</layer-list>
