@@ -1,45 +1,57 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {Alert, AppState, DeviceEventEmitter, Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View} from 'react-native';
+import {NavigationContainer} from '@react-navigation/native';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import {en} from './src/strings/en';
+import {ur} from './src/strings/ur';
+import {getFoodpandaSteps} from './src/data/foodpandaSteps';
+import {StepliOverlay} from './src/native/StepliOverlay';
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+type Language = 'en' | 'ur';
+type RootStack = {Language: undefined; Permissions: undefined; Onboarding: {page: number}; Home: undefined; Settings: undefined; Celebration: undefined};
+const Stack = createNativeStackNavigator<RootStack>();
+const C = {cream: '#FBF6E9', sage: '#6E8B72', dark: '#284435', amber: '#C86D45', ink: '#26352B', pale: '#E5EDDC'};
+const copyFor = (language: Language) => language === 'ur' ? ur : en;
 
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  return (
-    <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
-    </SafeAreaProvider>
-  );
+function Button({label, onPress, secondary = false, rtl = false}: {label: string; onPress: () => void; secondary?: boolean; rtl?: boolean}) {
+  return <Pressable accessibilityRole="button" style={[styles.button, secondary && styles.secondary]} onPress={onPress}><Text style={[styles.buttonText, secondary && styles.secondaryText, rtl && styles.rtl]}>{label}</Text></Pressable>;
 }
+function Screen({children, scroll = false}: {children: React.ReactNode; scroll?: boolean}) { const content = <View style={styles.screen}>{children}</View>; return <SafeAreaView style={styles.safe}>{scroll ? <ScrollView contentContainerStyle={styles.scroll}>{content}</ScrollView> : content}</SafeAreaView>; }
+function CopyText({children, style, language}: {children: React.ReactNode; style?: object; language: Language}) { return <Text style={[style, language === 'ur' && styles.rtl]}>{children}</Text>; }
 
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
+function LanguageScreen({onChoose}: {onChoose: (language: Language) => void}) {
+  return <Screen><Text style={styles.eyebrow}>Stepli</Text><Text style={styles.title}>Choose your language</Text><Text style={[styles.title, styles.rtl]}>اپنی زبان منتخب کریں</Text><View style={styles.flex}/><Button label="English" onPress={() => onChoose('en')}/><Button label="اردو" rtl onPress={() => onChoose('ur')} secondary/></Screen>;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
-
-export default App;
+function Permissions({navigation, language}: any) {
+  const c = copyFor(language); const [overlay, setOverlay] = useState(false); const [accessibility, setAccessibility] = useState(false);
+  const refresh = useCallback(async () => { setOverlay(await StepliOverlay.canDrawOverlays()); setAccessibility(await StepliOverlay.isAccessibilityEnabled()); }, []);
+  useEffect(() => { const unsubscribe = navigation.addListener('focus', refresh); const appState = AppState.addEventListener('change', state => { if (state === 'active') refresh(); }); refresh(); return () => { unsubscribe(); appState.remove(); }; }, [navigation, refresh]);
+  useEffect(() => { if (overlay && accessibility) navigation.replace('Onboarding', {page: 1}); }, [overlay, accessibility, navigation]);
+  const current = !overlay ? c.permissions.overlay : c.permissions.accessibility;
+  return <Screen><CopyText language={language} style={styles.eyebrow}>{c.permissions.setup}</CopyText><CopyText language={language} style={styles.title}>{current.headline}</CopyText><CopyText language={language} style={styles.body}>{current.body}</CopyText>
+    <View style={styles.permissionStatus}><CopyText language={language}>{overlay ? '✓' : '○'} {c.permissions.overlayStatus}</CopyText><CopyText language={language}>{accessibility ? '✓' : '○'} {c.permissions.accessibilityStatus}</CopyText></View>
+    {overlay && !accessibility && <View style={styles.guide}><CopyText language={language} style={styles.guideTitle}>{c.permissions.guideTitle}</CopyText><CopyText language={language} style={styles.guideBody}>{c.permissions.guideBody}</CopyText></View>}
+    <Button label={current.cta} rtl={language === 'ur'} onPress={() => !overlay ? StepliOverlay.openOverlaySettings() : StepliOverlay.openAccessibilitySettings()}/><Button secondary label={c.permissions.checkCta} rtl={language === 'ur'} onPress={refresh}/><CopyText language={language} style={styles.footnote}>{c.permissions.footnote}</CopyText>
+  </Screen>;
+}
+function Onboarding({route, navigation, language, completeOnboarding}: any) { const c = copyFor(language); const page = route.params.page; const item = page === 1 ? c.onboarding.screen1 : c.onboarding.screen2; const finish = async () => { await completeOnboarding(); navigation.replace('Home'); }; return <Screen><CopyText language={language} style={styles.eyebrow}>{page} / 2</CopyText><CopyText language={language} style={styles.title}>{item.headline}</CopyText><CopyText language={language} style={styles.body}>{item.body}</CopyText><View style={styles.flex}/><Button rtl={language === 'ur'} label={page === 1 ? c.onboarding.continue : c.onboarding.begin} onPress={() => page === 1 ? navigation.push('Onboarding', {page: 2}) : finish()}/></Screen>; }
+function Home({navigation, language}: any) {
+  const c = copyFor(language); const steps = useMemo(() => getFoodpandaSteps(language), [language]); const [current, setCurrent] = useState<number | null>(null);
+  const show = async (index: number) => { const step = steps[index]; setCurrent(index); await StepliOverlay.showStep(step.id, step.text, step.confirm, `${c.settings.step} ${index + 1} ${c.common.stepOf} ${steps.length}`, JSON.stringify(step.matcher)); };
+  const begin = async () => { await show(0); const canOpen = await StepliOverlay.launchFoodpanda(); if (!canOpen) { StepliOverlay.hide(); setCurrent(null); Alert.alert(c.common.notInstalledTitle, c.common.notInstalledBody); } };
+  useEffect(() => { const event = DeviceEventEmitter.addListener('stepliStepDetected', async (id: string) => { const index = steps.findIndex(step => step.id === id); if (index < 0 || current !== index) return; if (index === steps.length - 1) { StepliOverlay.hide(); setCurrent(null); navigation.navigate('Celebration'); } else await show(index + 1); }); return () => event.remove(); }, [current, navigation, steps]);
+  return <Screen scroll><View style={styles.topRow}><Text style={styles.logo}>Stepli</Text><Pressable accessibilityRole="button" onPress={() => navigation.navigate('Settings')}><CopyText language={language} style={styles.settings}>{c.home.settings}</CopyText></Pressable></View><CopyText language={language} style={styles.homeTitle}>{c.home.greeting}</CopyText><CopyText language={language} style={styles.body}>{c.home.subtext}</CopyText><Pressable accessibilityRole="button" onPress={begin} style={styles.taskCard}><Text style={styles.cardIcon}>🍲</Text><View style={styles.flex}><CopyText language={language} style={styles.cardTitle}>{c.home.cardFoodpanda}</CopyText><CopyText language={language} style={styles.cardBody}>{c.home.cardBody}</CopyText></View><Text style={styles.arrow}>›</Text></Pressable></Screen>;
+}
+function Settings({language, setLanguage}: {language: Language; setLanguage: (value: Language) => void}) { const c = copyFor(language); const [voice, setVoice] = useState(true); const [large, setLarge] = useState(false); return <Screen><CopyText language={language} style={styles.title}>{c.settings.title}</CopyText><CopyText language={language} style={styles.settingLabel}>{c.settings.language}</CopyText><Pressable style={styles.setting} onPress={() => setLanguage('en')}><Text>English</Text>{language === 'en' && <Text style={styles.active}>{c.settings.selected}</Text>}</Pressable><Pressable style={styles.setting} onPress={() => setLanguage('ur')}><CopyText language="ur">اردو</CopyText>{language === 'ur' && <CopyText language="ur" style={styles.active}>{c.settings.selected}</CopyText>}</Pressable><Row language={language} label={c.settings.voice} value={voice} setValue={setVoice}/><Row language={language} label={c.settings.textSize} value={large} setValue={setLarge}/></Screen>; }
+function Row({label, value, setValue, language}: any) { return <View style={styles.setting}><CopyText language={language}>{label}</CopyText><Switch value={value} onValueChange={setValue} trackColor={{true: C.sage}}/></View>; }
+function Celebration({navigation, language}: any) { const c = copyFor(language); return <Screen><Text style={styles.celebrate}>🎉</Text><CopyText language={language} style={styles.title}>{c.celebration.headline}</CopyText><CopyText language={language} style={styles.body}>{c.celebration.body}</CopyText><View style={styles.flex}/><Button rtl={language === 'ur'} label={c.celebration.ctaAgain} onPress={() => navigation.replace('Home')}/><Button rtl={language === 'ur'} secondary label={c.celebration.ctaHome} onPress={() => navigation.replace('Home')}/></Screen>; }
+export default function App() {
+  const [language, setLanguageState] = useState<Language | null>(null); const [onboardingComplete, setOnboardingComplete] = useState(false); const [loaded, setLoaded] = useState(false);
+  useEffect(() => { Promise.all([StepliOverlay.getLanguage(), StepliOverlay.getOnboardingComplete()]).then(([savedLanguage, complete]) => { setLanguageState(savedLanguage); setOnboardingComplete(complete); setLoaded(true); }).catch(() => setLoaded(true)); }, []);
+  const setLanguage = async (value: Language) => { await StepliOverlay.setLanguage(value); setLanguageState(value); };
+  const completeOnboarding = async () => { await StepliOverlay.setOnboardingComplete(); setOnboardingComplete(true); };
+  if (!loaded) return <SafeAreaView style={styles.safe}/>;
+  if (!language) return <LanguageScreen onChoose={setLanguage}/>;
+  return <NavigationContainer><Stack.Navigator initialRouteName={onboardingComplete ? 'Home' : 'Permissions'} screenOptions={{headerShown: false, animation: 'fade'}}><Stack.Screen name="Permissions">{props => <Permissions {...props} language={language}/>}</Stack.Screen><Stack.Screen name="Onboarding">{props => <Onboarding {...props} language={language} completeOnboarding={completeOnboarding}/>}</Stack.Screen><Stack.Screen name="Home">{props => <Home {...props} language={language}/>}</Stack.Screen><Stack.Screen name="Settings">{props => <Settings {...props} language={language} setLanguage={setLanguage}/>}</Stack.Screen><Stack.Screen name="Celebration">{props => <Celebration {...props} language={language}/>}</Stack.Screen></Stack.Navigator></NavigationContainer>;
+}
+const styles = StyleSheet.create({safe:{flex:1,backgroundColor:C.cream},scroll:{flexGrow:1},screen:{flex:1,padding:28,backgroundColor:C.cream},eyebrow:{color:C.sage,fontWeight:'700',letterSpacing:1,textTransform:'uppercase',fontSize:13,marginTop:24},title:{fontFamily:'serif',fontSize:38,lineHeight:46,color:C.dark,marginTop:18,fontWeight:'700'},homeTitle:{fontFamily:'serif',fontSize:34,lineHeight:42,color:C.dark,marginTop:56,fontWeight:'700'},body:{fontSize:19,lineHeight:29,color:C.ink,marginTop:18},button:{minHeight:56,borderRadius:16,alignItems:'center',justifyContent:'center',backgroundColor:C.amber,marginTop:20,paddingHorizontal:20},buttonText:{color:'#fff',fontSize:18,fontWeight:'700'},secondary:{backgroundColor:'transparent',borderWidth:1,borderColor:C.sage},secondaryText:{color:C.dark},permissionStatus:{backgroundColor:C.pale,borderRadius:16,padding:18,gap:12,marginTop:32},guide:{backgroundColor:'#FFF0DF',borderRadius:16,padding:18,marginTop:18},guideTitle:{fontSize:17,fontWeight:'700',color:C.dark},guideBody:{fontSize:15,lineHeight:23,color:C.ink,marginTop:8},footnote:{fontSize:14,lineHeight:20,color:C.ink,marginTop:20},flex:{flex:1},topRow:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},logo:{fontFamily:'serif',fontWeight:'700',fontSize:28,color:C.dark},settings:{fontSize:16,color:C.sage,fontWeight:'700'},taskCard:{backgroundColor:C.pale,borderRadius:22,padding:20,marginTop:36,flexDirection:'row',alignItems:'center',gap:14},cardIcon:{fontSize:36},cardTitle:{fontSize:21,fontWeight:'700',color:C.dark,lineHeight:27},cardBody:{fontSize:15,lineHeight:21,color:C.ink,marginTop:5},arrow:{fontSize:40,color:C.amber},settingLabel:{fontSize:15,color:C.sage,fontWeight:'700',marginTop:35,marginBottom:8},setting:{minHeight:61,borderBottomWidth:1,borderColor:'#D9DECF',flexDirection:'row',justifyContent:'space-between',alignItems:'center'},active:{color:C.sage,fontWeight:'700'},celebrate:{fontSize:64,marginTop:70,textAlign:'center'},rtl:{writingDirection:'rtl',textAlign:'right',fontFamily:'NotoSansArabic-Regular'}});

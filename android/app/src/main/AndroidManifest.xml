@@ -1,6 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- Android 11+ requires explicit visibility before we can detect or launch Foodpanda. -->
+    <queries>
+      <package android:name="com.global.foodpanda.android" />
+    </queries>
 
     <application
       android:name=".MainApplication"
@@ -11,6 +17,15 @@
       android:theme="@style/AppTheme"
       android:usesCleartextTraffic="${usesCleartextTraffic}"
       android:supportsRtl="true">
+      <!-- Play Console: include the accessibility declaration and Data Safety explanation. -->
+      <service
+        android:name=".StepliAccessibilityService"
+        android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+        android:exported="false"
+        android:label="@string/accessibility_service_label">
+        <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+        <meta-data android:name="android.accessibilityservice" android:resource="@xml/accessibility_service_config" />
+      </service>
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"

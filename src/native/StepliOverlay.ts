@@ -1,0 +1,3 @@
+import {NativeModules} from 'react-native';
+type Overlay = {canDrawOverlays(): Promise<boolean>; isAccessibilityEnabled(): Promise<boolean>; getLanguage(): Promise<'en' | 'ur' | null>; setLanguage(language: 'en' | 'ur'): Promise<void>; getOnboardingComplete(): Promise<boolean>; setOnboardingComplete(): Promise<void>; openOverlaySettings(): void; openAccessibilitySettings(): void; launchFoodpanda(): Promise<boolean>; showStep(id:string, text:string, confirm:string, progress:string, matcher:string): Promise<void>; hide(): void};
+export const StepliOverlay = NativeModules.StepliOverlayModule as Overlay;

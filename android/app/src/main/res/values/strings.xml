@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Stepli</string>
+    <string name="accessibility_service_label">Stepli screen guidance</string>
 </resources>
