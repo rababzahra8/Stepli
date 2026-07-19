@@ -2,6 +2,20 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+// Development-only local configuration. .env is git-ignored and must never be shipped in source control.
+def stepliEnv = new Properties()
+def stepliEnvFile = rootProject.file("../.env")
+if (stepliEnvFile.exists()) {
+    stepliEnvFile.withInputStream { stream -> stepliEnv.load(stream) }
+}
+def stepliConfig = { name, fallback ->
+    System.getenv(name) ?: project.findProperty(name) ?: stepliEnv.getProperty(name) ?: fallback
+}
+def stepliAiKey = stepliConfig("STEPLI_OPENAI_API_KEY", "")
+def stepliAiEndpoint = stepliConfig("STEPLI_AI_ENDPOINT", "https://api.openai.com/v1/responses")
+def stepliAiModel = stepliConfig("STEPLI_AI_MODEL", "gpt-5.6")
+def asBuildConfigString = { value -> "\"${value.toString().replace('\\', '\\\\').replace('\"', '\\\"')}\"" }
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -78,12 +92,18 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.stepli.app"
+    buildFeatures {
+        buildConfig true
+    }
     defaultConfig {
         applicationId "com.stepli.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        buildConfigField "String", "STEPLI_OPENAI_API_KEY", asBuildConfigString(stepliAiKey)
+        buildConfigField "String", "STEPLI_AI_ENDPOINT", asBuildConfigString(stepliAiEndpoint)
+        buildConfigField "String", "STEPLI_AI_MODEL", asBuildConfigString(stepliAiModel)
     }
     signingConfigs {
         debug {
@@ -116,4 +136,6 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    testImplementation "junit:junit:4.13.2"
 }

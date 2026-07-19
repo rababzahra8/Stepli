@@ -1,97 +1,61 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Stepli — phase 1 goal-based guidance
 
-# Getting Started
+Stepli is a read-only Android accessibility assistant. A person sets a goal, opens the app they want help with, and Stepli continually turns the visible accessibility UI into a single safe next instruction. It does not tap, type, navigate, or complete transactions for the person.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Architecture
 
-## Step 1: Start Metro
-
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
-
-To start the Metro dev server, run the following command from the root of your React Native project:
-
-```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
+```
+User goal (persistent SharedPreferences state)
+  -> AccessibilityService
+  -> AccessibilityScreenParser
+  -> ScreenModel (text, controls, inputs, lists, scrollability)
+  -> GuidanceEngine
+     -> GptPlanner, or RuleBasedPlanner fallback
+  -> GuidancePlan
+  -> read-only overlay highlight + TextToSpeech
 ```
 
-## Step 2: Build and run your app
+Key Android modules are organised under:
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+- `accessibility/` — event intake and safe rendering
+- `parser/` — reusable accessibility-tree to `ScreenModel` conversion
+- `models/` — UI, goal, memory, and guidance contracts
+- `planner/` — shared planner interface, local recovery planner, and coordinator
+- `ai/` — GPT-5.6 JSON prompt builder, HTTP client, and JSON parser
+- `repository/` — persistent goal, planner mode, voice preference, and concise session memory
+- `speech/` — explanation plus next-action TextToSpeech only
 
-### Android
+The accessibility service has no package filter. Foodpanda remains merely an optional quick-start card; no Foodpanda screen names, element matchers, dialogue sequence, or automatic step advancement are used for planning.
 
-```sh
-# Using npm
-npm run android
+## Planner modes
 
-# OR using Yarn
-yarn android
+`Local and private` is the default. It uses only visible generic relevance signals, can identify a goal-related control, and recovers with Back when a new screen is less relevant than the previous screen.
+
+`GPT-5.6` sends the compact, filtered screen model and recent guidance summaries to an OpenAI-compatible Responses endpoint. If remote planning is unavailable, Stepli automatically uses the local planner so guidance remains usable offline.
+
+For local development, add a newly-created key to the ignored [`.env`](.env) file. The checked-in [`.env.example`](.env.example) shows the expected format:
+
+```properties
+STEPLI_OPENAI_API_KEY=your_development_key
+STEPLI_AI_ENDPOINT=https://api.openai.com/v1/responses
+STEPLI_AI_MODEL=gpt-5.6
 ```
 
-### iOS
+`.env` is read only while Gradle builds the Android app. It is convenient for your own debug build but the resulting APK still contains the key, so do not distribute it. For a production app, set `STEPLI_AI_ENDPOINT` to an authenticated server-side gateway instead of shipping an API key in the APK.
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+See [the GPT planner contract](docs/gpt-planner-prompt.md) for the exact structured request and response.
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+## Privacy boundaries
 
-```sh
-bundle install
-```
+- The parser excludes all editable field contents and password fields before creating a screen model.
+- Memory stores short screen and instruction summaries, not raw accessibility trees.
+- GPT requests use HTTPS and are sent only when GPT mode is selected and configured.
+- The service never calls `performAction`.
 
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+## Verify
 
 ```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+npx tsc --noEmit
+npm test -- --runInBand
+cd android && ./gradlew :app:testDebugUnitTest :app:compileDebugKotlin
 ```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.

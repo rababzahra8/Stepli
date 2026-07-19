@@ -28,6 +28,7 @@ build/
 .idea
 .gradle
 local.properties
+secrets.properties
 *.iml
 *.hprof
 .cxx/
@@ -38,6 +39,9 @@ local.properties
 # node.js
 #
 node_modules/
+.env
+.env.*
+!.env.example
 npm-debug.log
 yarn-error.log
 

@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
-    <!-- Android 11+ requires explicit visibility before we can detect or launch Foodpanda. -->
+      <!-- Foodpanda is an optional quick-start shortcut; guidance itself supports any app. -->
     <queries>
       <package android:name="com.global.foodpanda.android" />
     </queries>
@@ -19,7 +19,7 @@
       android:supportsRtl="true">
       <!-- Play Console: include the accessibility declaration and Data Safety explanation. -->
       <service
-        android:name=".StepliAccessibilityService"
+        android:name=".accessibility.StepliAccessibilityService"
         android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
         android:exported="false"
         android:label="@string/accessibility_service_label">
