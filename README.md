@@ -12,6 +12,46 @@ Many apps assume that everyone is comfortable with search, checkout, addresses, 
 
 Foodpanda ordering is one practical use case: its guide covers location setup, search, selecting a restaurant and dish, cart review, address, delivery, payment, and final order review. The current guide library also includes Instagram posting and Stories, WhatsApp messaging, and YouTube search.
 
+## Setup and run
+
+```sh
+git clone <your-repository-url>
+cd Stepli
+npm ci
+```
+
+Start Metro in one terminal:
+
+```sh
+npm start
+```
+
+In a second terminal, with an Android device connected or an emulator running:
+
+```sh
+npm run android
+```
+
+### First-run permissions
+
+1. In Stepli, tap **Allow overlay** and enable **Display over other apps** for Stepli.
+2. Tap **Open accessibility settings**, choose **Stepli screen guidance**, and enable it.
+3. Return to Stepli; both permission indicators should show a check mark.
+4. Select a language, finish onboarding, and tap **Order food with Foodpanda**.
+
+The accessibility service is read-only: Stepli does not tap, type, scroll, or submit anything on the user's behalf.
+
+### Debug APK security check
+
+When installing a locally built debug APK on a physical phone, Google Play Protect may ask to scan the app or show a warning because it was not installed from the Play Store. Prefer scanning the app first. If it blocks your own test build, temporarily turn off scanning on that test device:
+
+1. Open the **Google Play Store**.
+2. Tap your profile picture, then **Play Protect** → **Settings**.
+3. Turn off **Scan apps with Play Protect**.
+4. Install the debug APK, then turn scanning back on immediately afterwards.
+
+This is only for local development testing. Keep Play Protect enabled for normal use and for any app you did not build yourself. [Google's Play Protect instructions](https://support.google.com/accounts/answer/9924802) explain the same setting.
+
 ### The story behind Stepli
 
 I built Stepli after seeing my mother, and other older family members, ask younger relatives to order food, book a ride, send a message, or complete other everyday phone tasks. The need is not about intelligence; it is about digital confidence. Stepli is intended to make those moments less dependent on a nearby family member and help people complete the next task independently.
@@ -78,39 +118,6 @@ This demo is supported on **Android only**. The repository contains the standard
 
 For the most representative test, use a physical Android device. An emulator can run Stepli, but may not provide a usable Foodpanda experience in every region.
 
-## Setup and run
-
-```sh
-git clone git@github.com:rababzahra8/Stepli.git
-cd Stepli
-npm ci
-```
-
-Start Metro in one terminal:
-
-```sh
-npm start
-```
-
-In a second terminal, with an Android device connected or an emulator running:
-
-```sh
-npm run android
-```
-
-If Android Studio reports missing SDK components, install API 36 and Build Tools 36 through **SDK Manager**, then run the command again. You can also open the `android/` folder in Android Studio and run the `app` configuration.
-
-### First-run permissions
-
-Stepli needs two Android permissions for the guide to work:
-
-1. In Stepli, tap **Allow overlay** and enable **Display over other apps** for Stepli.
-2. Tap **Open accessibility settings**, choose **Stepli screen guidance**, and enable it.
-3. Return to Stepli; both permission indicators should show a check mark.
-4. Select a language, finish onboarding, and tap **Order food with Foodpanda**.
-
-Android presents the accessibility-service settings separately from the app because this service can read the visible screen of the app selected by an active guide. The service is deliberately read-only: Stepli does not call Android actions to tap, type, scroll, or submit anything on the user's behalf.
-
 ### Demo data
 
 No external seed data or backend is required for the submitted demo. The built-in guides are bundled in [`src/data/`](src/data/), including Foodpanda, Instagram, WhatsApp, and YouTube guides, with English and Urdu copy in `src/strings/`.
@@ -149,30 +156,13 @@ Stepli is deliberately designed as assistance, not automation:
 - It relies on lightweight matchers rather than storing a screen recording, screenshots, keyboard input, or a full accessibility-tree history.
 - The final decision to place an order and any payment action always remains with the user.
 
-## How Codex supported development
+## How Codex helped
 
-I used Codex as a development partner while designing and implementing the current guide-based product. It helped me:
+Codex helped turn Stepli from a React Native starter project into a working Android prototype. It implemented the English/Urdu language flow, permission education, Foodpanda launch detection, and the Kotlin bridge between the TypeScript app, overlay, and read-only accessibility service. It also helped shape the Supabase flow for user-created and reusable guides.
 
-- turn the inclusion problem into a focused, testable first use case: an English/Urdu, step-by-step Foodpanda guide;
-- turn the original screen-analysis idea into a useful, guide-based build that can be tested and used today;
-- design the React Native screen flow for language selection, permission education, onboarding, home, settings, and completion;
-- build the Android bridge between the TypeScript app and Kotlin code;
-- implement the native overlay card and highlight ring while preserving touch access to the app underneath;
-- implement a constrained, read-only accessibility service that observes Foodpanda and emits step-progress events without automating actions;
-- structure tutorial content as localized, reusable data instead of hard-coding it into each screen; and
-- iterate on permissions copy and safety constraints so that the product clearly communicates user control.
+It also improved the real-device experience by making the highlight touch-through, keeping the guide behind the keyboard, adding a movable and expandable assistant bubble, and ensuring the overlay disappears outside Foodpanda. Codex helped test and install the app on a physical Android phone through ADB, then added the supplied robot branding as the app icon, launch artwork, in-app logo, and assistant bubble using the sage `#A8C3A0` background.
 
-The key product decision was to preserve the mission—teaching rather than automating—while building a reliable, privacy-conscious guide system first. The separate GPT-5.6 screen-analysis concept remains future work; it has no runtime codepath in the submitted application.
-
-## Submission details
-
-- **Repository:** https://github.com/rababzahra8/Stepli
-- **Category:** Accessibility & Inclusion (select the closest available official category)
-- **Project description:** Stepli is a bilingual Android accessibility companion that guides users through tasks in apps such as Foodpanda, Instagram, WhatsApp, and YouTube with an overlay card and optional visual highlights, while the user performs every action themselves.
-- **Demo video:** Record and add a public YouTube link before submitting. Keep it under three minutes and show: language selection, the two permission steps, one or more guides in action, and the read-only, user-controlled guidance experience.
-- **Codex feedback session ID:** In the Codex session where the majority of the core functionality was built, run `/feedback` and paste the resulting session ID into the challenge submission form: `<!-- PASTE_CODEX_FEEDBACK_SESSION_ID_HERE -->`.
-
-Before making the repository public, add an appropriate open-source license and ensure that no credentials, API keys, personal test data, or private `.env` values are committed.
+The current guidance is still data-driven rather than AI-generated: it reads Foodpanda's accessible UI information to locate and highlight expected controls, while beginner-friendly instructions are curated in advance. Dynamic AI screen understanding remains future work.
 
 ## Project structure
 
