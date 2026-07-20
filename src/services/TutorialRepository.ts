@@ -156,19 +156,34 @@ class TutorialRepository {
 
   private async auth(path: string, init: RequestInit): Promise<any> {
     const config = await this.requireConfig();
-    const response = await fetch(`${config.url}${path}`, {
+    const url = `${config.url}${path}`;
+    console.log('[Stepli Auth] request', {method: init.method || 'GET', path});
+    const response = await fetch(url, {
       ...init,
       headers: {'Content-Type': 'application/json', apikey: config.anonKey, ...(init.headers || {})},
     });
     const data = await this.json(response);
-    if (!response.ok) throw new Error(data?.msg || data?.error_description || 'Could not authenticate.');
+    if (!response.ok) {
+      console.error('[Stepli Auth] response failed', {
+        path,
+        status: response.status,
+        body: data,
+      });
+      throw new Error(data?.msg || data?.error_description || data?.message || data?.error || 'Could not authenticate.');
+    }
+    console.log('[Stepli Auth] response ok', {path, status: response.status, hasAccessToken: Boolean(data?.access_token)});
     return data;
   }
 
   private async setSession(data: any): Promise<AuthSession> {
     const session = {accessToken: data.access_token, refreshToken: data.refresh_token, userId: data.user?.id, email: data.user?.email};
     if (!session.accessToken || !session.refreshToken || !session.userId) throw new Error('Could not start a signed-in session.');
-    await StepliOverlay.setTutorialSession(session.accessToken, session.refreshToken, session.userId, session.email);
+    try {
+      await StepliOverlay.setTutorialSession(session.accessToken, session.refreshToken, session.userId, session.email);
+    } catch (error) {
+      // Keep the in-memory session so sign-in still works if Keystore persistence fails.
+      console.warn('[Stepli Auth] could not persist encrypted session', error);
+    }
     this.setCurrentSession(session);
     return session;
   }
@@ -203,7 +218,9 @@ class TutorialRepository {
       }
       return this.request<T>(url, init, true);
     }
-    if (!response.ok) throw new Error(data?.message || data?.hint || 'Could not reach the tutorial service.');
+    if (!response.ok) {
+      throw new Error(data?.message || data?.hint || data?.error_description || data?.error || 'Could not reach the tutorial service.');
+    }
     return data as T;
   }
 

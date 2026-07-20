@@ -1,16 +1,15 @@
 package com.stepli.app
 
 import android.content.Context
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import android.util.Base64
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
-import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
 import org.json.JSONObject
 
 /**
@@ -81,11 +80,28 @@ class SecureSessionStore(context: Context) {
     preferences.edit().remove(SESSION_PREFERENCE_KEY).commit()
   }
 
+  /**
+   * Android Keystore AES-GCM keys require randomized encryption by default, so
+   * the cipher must generate the IV. Passing a caller-made IV throws
+   * InvalidAlgorithmParameterException on ENCRYPT_MODE.
+   */
   private fun encrypt(plainText: String): String {
-    val iv = ByteArray(GCM_IV_LENGTH_BYTES).also(secureRandom::nextBytes)
-    val cipher = Cipher.getInstance(TRANSFORMATION).apply {
-      init(Cipher.ENCRYPT_MODE, secretKey(), GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
+    return try {
+      encryptWithCurrentKey(plainText)
+    } catch (_: Exception) {
+      // Emulator resets / key invalidation can leave an unusable Keystore entry.
+      deleteKey()
+      preferences.edit().remove(SESSION_PREFERENCE_KEY).commit()
+      encryptWithCurrentKey(plainText)
     }
+  }
+
+  private fun encryptWithCurrentKey(plainText: String): String {
+    val cipher = Cipher.getInstance(TRANSFORMATION).apply {
+      init(Cipher.ENCRYPT_MODE, secretKey())
+    }
+    val iv = cipher.iv
+    require(iv != null && iv.isNotEmpty()) { "Keystore did not provide a GCM IV" }
     val cipherText = cipher.doFinal(plainText.toByteArray(StandardCharsets.UTF_8))
     return Base64.encodeToString(iv + cipherText, Base64.NO_WRAP)
   }
@@ -105,7 +121,10 @@ class SecureSessionStore(context: Context) {
     val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
     val existingKey = keyStore.getKey(KEY_ALIAS, null) as? SecretKey
     if (existingKey != null) return existingKey
+    return createKey()
+  }
 
+  private fun createKey(): SecretKey {
     val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
     val keySpec = KeyGenParameterSpec.Builder(
       KEY_ALIAS,
@@ -117,6 +136,15 @@ class SecureSessionStore(context: Context) {
       .build()
     keyGenerator.init(keySpec)
     return keyGenerator.generateKey()
+  }
+
+  private fun deleteKey() {
+    try {
+      val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+      if (keyStore.containsAlias(KEY_ALIAS)) keyStore.deleteEntry(KEY_ALIAS)
+    } catch (_: Exception) {
+      // Best-effort cleanup before recreating the key.
+    }
   }
 
   private fun JSONObject.requiredString(name: String): String {
@@ -139,7 +167,5 @@ class SecureSessionStore(context: Context) {
     const val SESSION_FORMAT_VERSION = 1
     const val GCM_IV_LENGTH_BYTES = 12
     const val GCM_TAG_LENGTH_BITS = 128
-
-    val secureRandom = SecureRandom()
   }
 }

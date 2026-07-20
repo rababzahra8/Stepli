@@ -11,6 +11,53 @@ import {AuthSession, tutorialRepository} from './src/services/TutorialRepository
 import {StepliOverlay} from './src/native/StepliOverlay';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 
+function errorMessage(error: unknown, fallback = 'Please try again.') {
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === 'object') {
+    const value = error as {message?: unknown; code?: unknown; statusCode?: unknown};
+    if (typeof value.message === 'string' && value.message) return value.message;
+    if (value.code != null) return String(value.code);
+    if (value.statusCode != null) return `Error ${value.statusCode}`;
+  }
+  return fallback;
+}
+
+function logAuthError(stage: string, error: unknown) {
+  const details =
+    error && typeof error === 'object'
+      ? {
+          message: (error as {message?: unknown}).message,
+          code: (error as {code?: unknown}).code,
+          statusCode: (error as {statusCode?: unknown}).statusCode,
+          name: (error as {name?: unknown}).name,
+          stack: error instanceof Error ? error.stack : undefined,
+          raw: (() => {
+            try {
+              return JSON.parse(JSON.stringify(error));
+            } catch {
+              return String(error);
+            }
+          })(),
+        }
+      : {raw: String(error)};
+  console.error(`[Stepli Auth] ${stage}`, details);
+}
+
+function friendlyAuthMessage(error: unknown, language: Language) {
+  const raw = errorMessage(error).toLowerCase();
+  if (raw.includes('already') || raw.includes('registered') || raw.includes('exists')) {
+    return language === 'ur'
+      ? 'یہ ای میل پہلے سے موجود ہے۔ اگر تصدیق نہیں ہوئی تو Supabase Auth → Users سے اس صارف کو حذف کریں، یا Continue with Google دوبارہ آزمائیں۔'
+      : 'This email is already registered. If it was never confirmed, delete that user in Supabase Auth → Users, then try Continue with Google again.';
+  }
+  if (raw.includes('confirm') || raw.includes('not confirmed') || raw.includes('email not confirmed')) {
+    return language === 'ur'
+      ? 'ای میل تصدیق نہیں ہوئی۔ فری ٹائر پر ای میل اکثر نہیں آتی — Confirm email بند کریں یا Google استعمال کریں۔'
+      : 'Email is not confirmed. Free-tier confirmation emails often never arrive — turn off Confirm email in Supabase, or use Google.';
+  }
+  return errorMessage(error);
+}
+
 type Language = 'en' | 'ur';
 type RootStack = {
   Language: undefined;
@@ -184,7 +231,7 @@ function Home({navigation, language, session, onSessionChange}: {navigation: any
     <View style={styles.sectionRow}><CopyText language={language} style={styles.sectionTitle}>{language === 'ur' ? 'اسٹیپلی گائیڈز' : 'Stepli guides'}</CopyText></View>
     <TutorialCard guide={foodpanda} language={language} onPress={() => begin(foodpanda)}/>
     <View style={styles.sectionRow}><CopyText language={language} style={styles.sectionTitle}>{language === 'ur' ? 'کمیونٹی گائیڈز' : 'Community guides'}</CopyText><Pressable accessibilityRole="button" onPress={() => navigation.navigate(session ? 'Guides' : 'Account')}><CopyText language={language} style={styles.link}>{session ? (language === 'ur' ? 'سب دیکھیں' : 'See all') : (language === 'ur' ? 'سائن اِن' : 'Sign in')}</CopyText></Pressable></View>
-    {session ? <>{communityGuides.map(guide => <TutorialCard key={guide.id} guide={guide} language={language} onPress={() => begin(guide)}/>) }{loadingGuides && <ActivityIndicator color={C.sage} style={styles.loader}/>} {!loadingGuides && !communityGuides.length && <View style={styles.notice}><CopyText language={language} style={styles.noticeBody}>{language === 'ur' ? 'ابھی کوئی کمیونٹی گائیڈ موجود نہیں ہے۔ آپ پہلی گائیڈ بنا سکتے ہیں۔' : 'There are no community guides yet. You can create the first one.'}</CopyText></View>}</> : <Pressable accessibilityRole="button" onPress={() => navigation.navigate('Account')} style={styles.notice}><CopyText language={language} style={styles.noticeTitle}>{language === 'ur' ? 'کمیونٹی گائیڈز دیکھنے کے لیے سائن اِن کریں' : 'Sign in to see community guides'}</CopyText><CopyText language={language} style={styles.noticeBody}>{language === 'ur' ? 'اکاؤنٹ بنانے کے بعد آپ دوسرے لوگوں کے شائع کردہ ٹیوٹوریل دیکھ اور استعمال کر سکیں گے۔' : 'After creating an account, you can see and use tutorials published by other people.'}</CopyText></Pressable>}
+    {session ? <View>{communityGuides.map(guide => <TutorialCard key={guide.id} guide={guide} language={language} onPress={() => begin(guide)}/>)}{loadingGuides ? <ActivityIndicator color={C.sage} style={styles.loader}/> : null}{!loadingGuides && !communityGuides.length ? <View style={styles.notice}><CopyText language={language} style={styles.noticeBody}>{language === 'ur' ? 'ابھی کوئی کمیونٹی گائیڈ موجود نہیں ہے۔ آپ پہلی گائیڈ بنا سکتے ہیں۔' : 'There are no community guides yet. You can create the first one.'}</CopyText></View> : null}</View> : <Pressable accessibilityRole="button" onPress={() => navigation.navigate('Account')} style={styles.notice}><CopyText language={language} style={styles.noticeTitle}>{language === 'ur' ? 'کمیونٹی گائیڈز دیکھنے کے لیے سائن اِن کریں' : 'Sign in to see community guides'}</CopyText><CopyText language={language} style={styles.noticeBody}>{language === 'ur' ? 'اکاؤنٹ بنانے کے بعد آپ دوسرے لوگوں کے شائع کردہ ٹیوٹوریل دیکھ اور استعمال کر سکیں گے۔' : 'After creating an account, you can see and use tutorials published by other people.'}</CopyText></Pressable>}
     <Pressable accessibilityRole="button" onPress={() => navigation.navigate(session ? 'Guides' : 'Account')} style={styles.addGuideCard}><Text style={styles.addGuideIcon}>＋</Text><View style={styles.flex}><CopyText language={language} style={styles.cardTitle}>{session ? (language === 'ur' ? 'کسی اور ایپ کے لیے گائیڈ بنائیں' : 'Create a guide for another app') : (language === 'ur' ? 'گائیڈ بنانے کے لیے اکاؤنٹ بنائیں' : 'Create an account to make guides')}</CopyText><CopyText language={language} style={styles.cardBody}>{language === 'ur' ? 'اپنی ایپ اور قدم شامل کریں، پھر انہیں دوبارہ استعمال کریں۔' : 'Add your app and steps, then use them again whenever you need help.'}</CopyText></View></Pressable>
   </Screen>;
 }
@@ -206,24 +253,58 @@ function Account({navigation, language, session, onSessionChange}: {navigation: 
   const authenticate = async (signup: boolean) => {
     if (!email.trim() || password.length < 8) { Alert.alert(language === 'ur' ? 'ای میل اور پاس ورڈ' : 'Email and password', language === 'ur' ? 'درست ای میل اور کم از کم 8 حروف کا پاس ورڈ لکھیں۔' : 'Enter an email and a password with at least 8 characters.'); return; }
     setBusy(true);
+    console.log(`[Stepli Auth] email ${signup ? 'signUp' : 'signIn'} starting`);
     try {
       const next = signup ? await tutorialRepository.signUp(email, password) : await tutorialRepository.signIn(email, password);
-      if (!next) Alert.alert(language === 'ur' ? 'ای میل چیک کریں' : 'Check your email', language === 'ur' ? 'اکاؤنٹ کی تصدیق کے لیے ای میل میں موجود لنک کھولیں، پھر سائن اِن کریں۔' : 'Open the confirmation link in your email, then sign in.');
-      else { onSessionChange(next); setPassword(''); }
-    } catch (error) { Alert.alert(language === 'ur' ? 'سائن اِن نہیں ہو سکا' : 'Could not sign in', error instanceof Error ? error.message : 'Please try again.'); }
+      if (!next) {
+        console.warn('[Stepli Auth] email signUp returned no session (confirmation required)');
+        Alert.alert(
+          language === 'ur' ? 'ای میل تصدیق' : 'Email confirmation',
+          language === 'ur'
+            ? 'اس ای میل سے اکاؤنٹ بن گیا ہے لیکن تصدیق نہیں ہوئی۔ فری ٹائر پر ای میل اکثر نہیں آتی۔ اسی ای میل سے Continue with Google استعمال کریں، یا Supabase میں Confirm email بند کر دیں۔'
+            : 'An account was created but not confirmed. On free-tier Supabase the confirmation email often never arrives. Use Continue with Google with the same email, or turn off Confirm email in the Supabase Auth settings.',
+        );
+      } else {
+        console.log('[Stepli Auth] email auth ok', {userId: next.userId, email: next.email});
+        onSessionChange(next);
+        setPassword('');
+      }
+    } catch (error) {
+      logAuthError(signup ? 'email signUp failed' : 'email signIn failed', error);
+      Alert.alert(language === 'ur' ? 'سائن اِن نہیں ہو سکا' : 'Could not sign in', friendlyAuthMessage(error, language));
+    }
     finally { setBusy(false); }
   };
   const authenticateWithGoogle = async () => {
-    if (!googleWebClientId) return;
+    if (!googleWebClientId) {
+      console.error('[Stepli Auth] Google sign-in blocked: missing webClientId (rebuild after setting STEPLI_GOOGLE_WEB_CLIENT_ID)');
+      return;
+    }
     setBusy(true);
+    console.log('[Stepli Auth] Google sign-in starting', {webClientIdSuffix: googleWebClientId.slice(-24)});
     try {
       GoogleSignin.configure({webClientId: googleWebClientId});
       await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
+      // Clear the previous Google account so the email picker shows again.
+      try { await GoogleSignin.signOut(); } catch (error) { console.log('[Stepli Auth] Google signOut before picker', errorMessage(error)); }
       const result = await GoogleSignin.signIn();
-      if (result.type === 'cancelled') return;
+      console.log('[Stepli Auth] Google account picker result', {
+        type: result.type,
+        hasIdToken: Boolean(result.type === 'success' && result.data?.idToken),
+        email: result.type === 'success' ? result.data?.user?.email : undefined,
+      });
+      if (result.type === 'cancelled') {
+        console.warn('[Stepli Auth] Google sign-in cancelled by user');
+        return;
+      }
       if (!result.data.idToken) throw new Error('Google did not return an ID token. Check the Web client ID configuration.');
-      onSessionChange(await tutorialRepository.signInWithGoogle(result.data.idToken));
-    } catch (error) { Alert.alert(language === 'ur' ? 'گوگل سے سائن اِن نہیں ہو سکا' : 'Could not sign in with Google', error instanceof Error ? error.message : 'Please try again.'); }
+      const session = await tutorialRepository.signInWithGoogle(result.data.idToken);
+      console.log('[Stepli Auth] Google → Supabase session ok', {userId: session.userId, email: session.email});
+      onSessionChange(session);
+    } catch (error) {
+      logAuthError('Google sign-in failed', error);
+      Alert.alert(language === 'ur' ? 'گوگل سے سائن اِن نہیں ہو سکا' : 'Could not sign in with Google', friendlyAuthMessage(error, language));
+    }
     finally { setBusy(false); }
   };
   const signOut = async () => {
@@ -253,7 +334,7 @@ function Guides({navigation, language, session}: {navigation: any; language: Lan
   }, [language, session]);
   useEffect(() => { refresh(); return navigation.addListener('focus', refresh); }, [navigation, refresh]);
   return <Screen scroll><Back navigation={navigation} language={language}/><CopyText language={language} style={styles.title}>{language === 'ur' ? 'ٹیوٹوریل گائیڈز' : 'Tutorial guides'}</CopyText><CopyText language={language} style={styles.body}>{language === 'ur' ? 'دوسرے لوگوں کے شائع کردہ گائیڈز دیکھیں، یا اپنی ایپ کے لیے قدم بنائیں۔' : 'See guides published by other people, or make steps for an app of your own.'}</CopyText>
-    {!configured ? <View style={styles.notice}><CopyText language={language} style={styles.noticeTitle}>{language === 'ur' ? 'ٹیوٹوریل سروس سیٹ اپ کریں' : 'Set up tutorial sharing'}</CopyText><CopyText language={language} style={styles.noticeBody}>{language === 'ur' ? 'Supabase URL اور publishable key کو مقامی .env میں شامل کریں، پھر ایپ دوبارہ بنائیں۔' : 'Add the Supabase URL and publishable key to your local .env, then rebuild.'}</CopyText></View> : !session ? <View style={styles.authCard}><CopyText language={language} style={styles.sectionTitle}>{language === 'ur' ? 'کمیونٹی گائیڈز کے لیے سائن اِن کریں' : 'Sign in for community guides'}</CopyText><CopyText language={language} style={styles.noticeBody}>{language === 'ur' ? 'اکاؤنٹ بنانے کے بعد آپ دوسرے لوگوں کے شائع کردہ ٹیوٹوریل دیکھ اور اپنی گائیڈز محفوظ کر سکیں گے۔' : 'After creating an account, you can see tutorials published by other people and save your own guides.'}</CopyText><Button label={language === 'ur' ? 'سائن اِن کریں' : 'Sign in'} rtl={language === 'ur'} onPress={() => navigation.navigate('Account')}/></View> : <><Button label={language === 'ur' ? 'نیا گائیڈ بنائیں' : 'Create a new guide'} rtl={language === 'ur'} onPress={() => navigation.navigate('GuideEditor')}/>{loading && <ActivityIndicator color={C.sage} style={styles.loader}/>} {guides.length > 0 && <><CopyText language={language} style={styles.settingLabel}>{language === 'ur' ? 'دستیاب گائیڈز' : 'Available guides'}</CopyText>{guides.map(guide => <View style={styles.guideListItem} key={guide.id}><CopyText language={language} style={styles.cardTitle}>{guide.title}</CopyText><CopyText language={language} style={styles.cardBody}>{guide.appName} · {guide.steps.length} {language === 'ur' ? 'قدم' : 'steps'}</CopyText></View>)}</>}{!loading && !guides.length && <View style={styles.notice}><CopyText language={language} style={styles.noticeBody}>{language === 'ur' ? 'ابھی کوئی کمیونٹی گائیڈ موجود نہیں ہے۔' : 'There are no community guides yet.'}</CopyText></View>}</>}
+    {!configured ? <View style={styles.notice}><CopyText language={language} style={styles.noticeTitle}>{language === 'ur' ? 'ٹیوٹوریل سروس سیٹ اپ کریں' : 'Set up tutorial sharing'}</CopyText><CopyText language={language} style={styles.noticeBody}>{language === 'ur' ? 'Supabase URL اور publishable key کو مقامی .env میں شامل کریں، پھر ایپ دوبارہ بنائیں۔' : 'Add the Supabase URL and publishable key to your local .env, then rebuild.'}</CopyText></View> : !session ? <View style={styles.authCard}><CopyText language={language} style={styles.sectionTitle}>{language === 'ur' ? 'کمیونٹی گائیڈز کے لیے سائن اِن کریں' : 'Sign in for community guides'}</CopyText><CopyText language={language} style={styles.noticeBody}>{language === 'ur' ? 'اکاؤنٹ بنانے کے بعد آپ دوسرے لوگوں کے شائع کردہ ٹیوٹوریل دیکھ اور اپنی گائیڈز محفوظ کر سکیں گے۔' : 'After creating an account, you can see tutorials published by other people and save your own guides.'}</CopyText><Button label={language === 'ur' ? 'سائن اِن کریں' : 'Sign in'} rtl={language === 'ur'} onPress={() => navigation.navigate('Account')}/></View> : <View><Button label={language === 'ur' ? 'نیا گائیڈ بنائیں' : 'Create a new guide'} rtl={language === 'ur'} onPress={() => navigation.navigate('GuideEditor')}/>{loading ? <ActivityIndicator color={C.sage} style={styles.loader}/> : null}{guides.length > 0 ? <View><CopyText language={language} style={styles.settingLabel}>{language === 'ur' ? 'دستیاب گائیڈز' : 'Available guides'}</CopyText>{guides.map(guide => <View style={styles.guideListItem} key={guide.id}><CopyText language={language} style={styles.cardTitle}>{guide.title}</CopyText><CopyText language={language} style={styles.cardBody}>{guide.appName} · {guide.steps.length} {language === 'ur' ? 'قدم' : 'steps'}</CopyText></View>)}</View> : null}{!loading && !guides.length ? <View style={styles.notice}><CopyText language={language} style={styles.noticeBody}>{language === 'ur' ? 'ابھی کوئی کمیونٹی گائیڈ موجود نہیں ہے۔' : 'There are no community guides yet.'}</CopyText></View> : null}</View>}
   </Screen>;
 }
 
@@ -283,7 +364,7 @@ function GuideEditor({navigation, language}: any) {
     const draft: TutorialDraft = {appName, appPackage, title, description, language, visibility: published ? 'published' : 'private', steps: cleanSteps};
     setSaving(true);
     try { await tutorialRepository.createGuide(draft); Alert.alert(language === 'ur' ? 'گائیڈ محفوظ ہو گئی' : 'Guide saved', language === 'ur' ? 'ہوم اسکرین پر جا کر اپنی گائیڈ شروع کریں۔' : 'Go back to Home to start your guide.'); navigation.goBack(); }
-    catch (error) { Alert.alert(language === 'ur' ? 'گائیڈ محفوظ نہیں ہوئی' : 'Could not save guide', error instanceof Error ? error.message : 'Please try again.'); }
+    catch (error) { Alert.alert(language === 'ur' ? 'گائیڈ محفوظ نہیں ہوئی' : 'Could not save guide', errorMessage(error)); }
     finally { setSaving(false); }
   };
   return <Screen scroll><Back navigation={navigation} language={language}/><CopyText language={language} style={styles.title}>{language === 'ur' ? 'نیا گائیڈ' : 'New guide'}</CopyText><CopyText language={language} style={styles.body}>{language === 'ur' ? 'صرف وہی متن یا accessibility label شامل کریں جسے قدم پہچاننے کے لیے ضروری ہو۔ پاس ورڈ، نجی پیغام یا اسکرین شاٹ شامل نہ کریں۔' : 'Only add labels needed to recognise a step. Do not add passwords, private messages, or screenshots.'}</CopyText>
