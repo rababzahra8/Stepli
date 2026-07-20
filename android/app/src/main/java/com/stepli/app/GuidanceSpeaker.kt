@@ -2,6 +2,7 @@ package com.stepli.app
 
 import android.content.Context
 import android.speech.tts.TextToSpeech
+import android.widget.Toast
 import java.util.Locale
 
 /**
@@ -12,6 +13,7 @@ class GuidanceSpeaker(context: Context) : TextToSpeech.OnInitListener {
   private val appContext = context.applicationContext
   private var ready = false
   private var pending: Pair<String, String>? = null
+  private var showedMissingUrduVoiceMessage = false
   private val tts = TextToSpeech(appContext, this)
 
   override fun onInit(status: Int) {
@@ -22,11 +24,38 @@ class GuidanceSpeaker(context: Context) : TextToSpeech.OnInitListener {
   fun speak(text: String, language: String) {
     if (text.isBlank()) return
     if (!ready) { pending = text to language; return }
-    val preferred = if (language.equals("ur", ignoreCase = true)) Locale.forLanguageTag("ur-PK") else Locale.US
-    // Some devices do not have Urdu installed. The system chooses its own
-    // fallback voice rather than failing the entire overlay.
-    if (tts.isLanguageAvailable(preferred) >= TextToSpeech.LANG_AVAILABLE) tts.language = preferred
+    if (!selectLanguage(language)) {
+      // Do not let Android pronounce Urdu text with the previously selected
+      // (usually English) voice. The user needs to install an Urdu TTS voice.
+      showMissingUrduVoiceMessage()
+      return
+    }
     tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "stepli-guidance")
+  }
+
+  /**
+   * TextToSpeech may accept a locale but retain its previous voice. Confirm
+   * that the selected voice is Urdu before allowing Urdu narration to play.
+   */
+  private fun selectLanguage(language: String): Boolean {
+    if (!language.equals("ur", ignoreCase = true)) {
+      return tts.setLanguage(Locale.US) >= TextToSpeech.LANG_AVAILABLE
+    }
+    val urduLocales = listOf(Locale.forLanguageTag("ur-PK"), Locale.forLanguageTag("ur"))
+    return urduLocales.any { locale ->
+      val result = tts.setLanguage(locale)
+      result >= TextToSpeech.LANG_AVAILABLE && (tts.voice?.locale?.language?.equals("ur", ignoreCase = true) ?: true)
+    }
+  }
+
+  private fun showMissingUrduVoiceMessage() {
+    if (showedMissingUrduVoiceMessage) return
+    showedMissingUrduVoiceMessage = true
+    Toast.makeText(
+      appContext,
+      "اردو آواز کے لیے فون کی ٹیکسٹ ٹو اسپیچ سیٹنگز میں اردو (پاکستان) کی آواز انسٹال کریں۔",
+      Toast.LENGTH_LONG,
+    ).show()
   }
 
   fun stop() {
