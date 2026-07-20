@@ -81,10 +81,24 @@ class StepliOverlayModule(private val context: ReactApplicationContext) : ReactC
     targetPackage: String,
     language: String,
     spokenText: String,
+    canGoBack: Boolean,
     promise: Promise,
   ) {
     if (targetPackage.isBlank()) { promise.reject("invalid_target", "A target app package is required"); return }
-    StepliOverlayService.show(context, OverlayStep(id, text, confirm, progress, matcher, targetPackage, language, spokenText.ifBlank { text }))
+    StepliOverlayService.show(
+      context,
+      OverlayStep(
+        id,
+        text,
+        confirm,
+        progress,
+        matcher,
+        targetPackage,
+        language,
+        spokenText.ifBlank { text },
+        canGoBack = canGoBack,
+      ),
+    )
     promise.resolve(null)
   }
 
@@ -154,6 +168,55 @@ class StepliOverlayModule(private val context: ReactApplicationContext) : ReactC
       promise.resolve(null)
     } catch (error: Exception) {
       promise.reject("secure_session_unavailable", "Could not clear the tutorial session", error)
+    }
+  }
+
+  @ReactMethod
+  fun isUrduVoiceAvailable(promise: Promise) {
+    Thread {
+      try {
+        promise.resolve(TtsVoiceHelper.isUrduVoiceAvailable(reactApplicationContext))
+      } catch (error: Exception) {
+        promise.resolve(false)
+      }
+    }.start()
+  }
+
+  /** Lists TTS languages on this phone so the person can see what is installed. */
+  @ReactMethod
+  fun getInstalledTtsLanguages(promise: Promise) {
+    Thread {
+      try {
+        promise.resolve(TtsVoiceHelper.listVoiceLanguages(reactApplicationContext))
+      } catch (error: Exception) {
+        promise.resolve(Arguments.createArray())
+      }
+    }.start()
+  }
+
+  @ReactMethod
+  fun openTextToSpeechSettings() {
+    TtsVoiceHelper.openSettings(reactApplicationContext)
+  }
+
+  /** Speaks text with the device TTS engine (for the in-app Stepli voice tour). */
+  @ReactMethod
+  fun speak(text: String, language: String, promise: Promise) {
+    try {
+      StepliOverlayService.speakGuidance(reactApplicationContext, text, language)
+      promise.resolve(null)
+    } catch (error: Exception) {
+      promise.reject("tts_unavailable", "Could not speak guidance", error)
+    }
+  }
+
+  @ReactMethod
+  fun stopSpeech(promise: Promise) {
+    try {
+      StepliOverlayService.stopGuidanceSpeech()
+      promise.resolve(null)
+    } catch (error: Exception) {
+      promise.resolve(null)
     }
   }
 

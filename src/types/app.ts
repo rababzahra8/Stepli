@@ -10,6 +10,8 @@ export type RootStack = {
   Settings: undefined;
   Account: undefined;
   Guides: undefined;
+  BuiltInGuides: undefined;
+  VoiceTour: undefined;
   GuideEditor: undefined;
   Celebration: {title?: string} | undefined;
 };

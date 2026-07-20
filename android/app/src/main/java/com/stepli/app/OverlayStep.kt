@@ -10,4 +10,6 @@ data class OverlayStep(
   val targetPackage: String,
   val language: String,
   val spokenText: String,
+  /** When true, the card shows “hear last step again” (go back one step). */
+  val canGoBack: Boolean = false,
 )

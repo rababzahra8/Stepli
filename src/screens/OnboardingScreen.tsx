@@ -9,11 +9,13 @@ export function OnboardingScreen({
   route,
   navigation,
   language,
+  setLanguage,
   completeOnboarding,
 }: {
   route: {params: {page: number}};
   navigation: any;
   language: Language;
+  setLanguage: (language: Language) => void;
   completeOnboarding: () => Promise<void>;
 }) {
   const c = copyFor(language);
@@ -24,11 +26,19 @@ export function OnboardingScreen({
     navigation.replace('Home');
   };
   return (
-    <Screen>
+    <Screen language={language} setLanguage={setLanguage}>
       <CopyText language={language} style={styles.eyebrow}>{page} / 2</CopyText>
       <CopyText language={language} style={styles.title}>{item.headline}</CopyText>
       <CopyText language={language} style={styles.body}>{item.body}</CopyText>
       <View style={styles.flex} />
+      {page === 2 ? (
+        <Button
+          secondary
+          rtl={language === 'ur'}
+          label={language === 'ur' ? '🔊  آواز والا ٹور سنیں' : '🔊  Hear the voice tour'}
+          onPress={() => navigation.navigate('VoiceTour')}
+        />
+      ) : null}
       <Button
         rtl={language === 'ur'}
         label={page === 1 ? c.onboarding.continue : c.onboarding.begin}

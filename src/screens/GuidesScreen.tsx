@@ -1,6 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {View} from 'react-native';
-import {Back, Button, CopyText, Loader, Screen} from '../components/ui';
+import {Button, CopyText, Loader, Screen} from '../components/ui';
 import {TutorialGuide} from '../models/tutorial';
 import {AuthSession, tutorialRepository} from '../services/TutorialRepository';
 import {styles} from '../theme/styles';
@@ -9,10 +9,12 @@ import {Language} from '../types/app';
 export function GuidesScreen({
   navigation,
   language,
+  setLanguage,
   session,
 }: {
   navigation: any;
   language: Language;
+  setLanguage: (language: Language) => void;
   session: AuthSession | null;
 }) {
   const [configured, setConfigured] = useState(false);
@@ -39,8 +41,7 @@ export function GuidesScreen({
     return navigation.addListener('focus', refresh);
   }, [navigation, refresh]);
   return (
-    <Screen scroll>
-      <Back navigation={navigation} language={language} />
+    <Screen scroll language={language} setLanguage={setLanguage} navigation={navigation}>
       <CopyText language={language} style={styles.title}>{language === 'ur' ? 'گائیڈز' : 'Guides'}</CopyText>
       {!configured ? (
         <View style={styles.notice}>

@@ -1,35 +1,32 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {Alert, DeviceEventEmitter, Pressable, Text, View} from 'react-native';
-import {BrandMark, Button, CopyText, Loader, Screen, TutorialCard} from '../components/ui';
-import {getFoodpandaTutorial} from '../data/foodpandaSteps';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {Image, Pressable, Text, View} from 'react-native';
+import {AppGuideGroupCard, BrandMark, Button, CopyText, Loader, Screen, TutorialCard, stepliLogo} from '../components/ui';
+import {getBuiltInGuides, groupGuidesByApp} from '../data/builtInGuides';
+import {useGuideRunner} from '../hooks/useGuideRunner';
 import {TutorialGuide} from '../models/tutorial';
 import {AuthSession, tutorialRepository} from '../services/TutorialRepository';
-import {StepliOverlay} from '../native/StepliOverlay';
 import {styles} from '../theme/styles';
-import {ActiveTutorial, Language} from '../types/app';
+import {Language} from '../types/app';
 import {copyFor} from '../utils/copy';
 
 export function HomeScreen({
   navigation,
   language,
+  setLanguage,
   session,
 }: {
   navigation: any;
   language: Language;
+  setLanguage: (language: Language) => void;
   session: AuthSession | null;
 }) {
   const c = copyFor(language);
-  const foodpanda = useMemo(() => getFoodpandaTutorial(language), [language]);
+  const builtInGroups = useMemo(() => groupGuidesByApp(getBuiltInGuides(language)), [language]);
+  const [expandedApps, setExpandedApps] = useState<Record<string, boolean>>({});
   const [communityGuides, setCommunityGuides] = useState<TutorialGuide[]>([]);
   const [loadingGuides, setLoadingGuides] = useState(false);
-  const [active, setActive] = useState<ActiveTutorial | null>(null);
-  const [starting, setStarting] = useState(false);
-  const activeRef = useRef<ActiveTutorial | null>(null);
+  const {active, starting, begin, closeNavigator} = useGuideRunner(language, navigation);
 
-  const setActiveGuide = (next: ActiveTutorial | null) => {
-    activeRef.current = next;
-    setActive(next);
-  };
   const refreshGuides = useCallback(async () => {
     if (!session || !(await tutorialRepository.isConfigured())) {
       setCommunityGuides([]);
@@ -45,92 +42,13 @@ export function HomeScreen({
     }
   }, [language, session]);
 
-  const show = useCallback(
-    async (guide: TutorialGuide, index: number) => {
-      const step = guide.steps[index];
-      if (!step) return;
-      const next = {guide, index};
-      setActiveGuide(next);
-      await StepliOverlay.showStep(
-        step.id,
-        step.text,
-        step.confirm,
-        `${c.settings.step} ${index + 1} ${c.common.stepOf} ${guide.steps.length}`,
-        JSON.stringify(step.matcher || {}),
-        guide.appPackage,
-        language,
-        step.spokenText || step.text,
-      );
-    },
-    [c.common.stepOf, c.settings.step, language],
-  );
-
-  const closeNavigator = useCallback(async () => {
-    StepliOverlay.closeNavigator();
-    setActiveGuide(null);
-  }, []);
-
-  const begin = useCallback(
-    async (guide: TutorialGuide) => {
-      if (!guide.steps.length) {
-        Alert.alert(
-          language === 'ur' ? 'قدم موجود نہیں ہیں' : 'No steps yet',
-          language === 'ur' ? 'اس گائیڈ میں ابھی کوئی قدم شامل نہیں ہے۔' : 'This guide does not contain any steps yet.',
-        );
-        return;
-      }
-      setStarting(true);
-      try {
-        await show(guide, 0);
-        const canOpen = await StepliOverlay.launchApp(guide.appPackage);
-        if (!canOpen) {
-          StepliOverlay.closeNavigator();
-          setActiveGuide(null);
-          Alert.alert(
-            language === 'ur' ? 'ایپ انسٹال نہیں ہے' : 'App is not installed',
-            language === 'ur' ? `${guide.appName} انسٹال کریں، پھر دوبارہ کوشش کریں۔` : `Install ${guide.appName}, then try again.`,
-          );
-        }
-      } catch {
-        StepliOverlay.closeNavigator();
-        setActiveGuide(null);
-        Alert.alert(
-          language === 'ur' ? 'گائیڈ شروع نہیں ہوئی' : 'Could not start guidance',
-          language === 'ur' ? 'اجازتیں چیک کر کے دوبارہ کوشش کریں۔' : 'Check the permissions and try again.',
-        );
-      } finally {
-        setStarting(false);
-      }
-    },
-    [language, show],
-  );
-
   useEffect(() => {
     refreshGuides();
     return navigation.addListener('focus', refreshGuides);
   }, [navigation, refreshGuides]);
 
-  useEffect(() => {
-    const advanced = DeviceEventEmitter.addListener('stepliStepDetected', async (id: string) => {
-      const current = activeRef.current;
-      if (!current || current.guide.steps[current.index]?.id !== id) return;
-      if (current.index >= current.guide.steps.length - 1) {
-        StepliOverlay.closeNavigator();
-        setActiveGuide(null);
-        navigation.navigate('Celebration', {title: current.guide.title});
-      } else {
-        await show(current.guide, current.index + 1);
-      }
-    });
-    const closed = DeviceEventEmitter.addListener('stepliNavigatorClosed', () => setActiveGuide(null));
-    return () => {
-      advanced.remove();
-      closed.remove();
-    };
-  }, [navigation, show]);
-
   return (
-    <Screen scroll>
+    <Screen scroll language={language} setLanguage={setLanguage}>
       <View style={styles.topRow}>
         <BrandMark />
         <View style={styles.topActions}>
@@ -145,6 +63,20 @@ export function HomeScreen({
         </View>
       </View>
       <CopyText language={language} style={styles.homeTitle}>{c.home.greeting}</CopyText>
+      <Pressable accessibilityRole="button" onPress={() => navigation.navigate('VoiceTour')} style={styles.taskCard}>
+        <Image source={stepliLogo} style={styles.guideCardImage} accessibilityLabel="Stepli" />
+        <View style={styles.flex}>
+          <CopyText language={language} style={styles.cardTitle}>
+            {language === 'ur' ? 'Stepli کیسے استعمال کریں؟' : 'How to use Stepli'}
+          </CopyText>
+          <CopyText language={language} style={styles.cardBody}>
+            {language === 'ur'
+              ? 'آواز والا ٹور — Stepli کیا کرتی ہے، قدم بہ قدم سنیں۔'
+              : 'Voice tour — hear what Stepli does, step by step.'}
+          </CopyText>
+        </View>
+        <Text style={styles.arrow}>›</Text>
+      </Pressable>
       {starting ? <Loader language={language} label={language === 'ur' ? 'گائیڈ شروع ہو رہی ہے…' : 'Starting guide…'} /> : null}
       {active ? (
         <View style={styles.activeGuide}>
@@ -154,8 +86,29 @@ export function HomeScreen({
           <Button danger label={language === 'ur' ? 'روکیں' : 'Stop'} rtl={language === 'ur'} onPress={closeNavigator} />
         </View>
       ) : null}
-      <CopyText language={language} style={styles.sectionTitle}>{language === 'ur' ? 'گائیڈز' : 'Guides'}</CopyText>
-      <TutorialCard guide={foodpanda} language={language} onPress={() => begin(foodpanda)} />
+
+      <View style={styles.sectionRow}>
+        <CopyText language={language} style={styles.sectionTitle}>{language === 'ur' ? 'گائیڈز' : 'Guides'}</CopyText>
+        <Pressable accessibilityRole="button" onPress={() => navigation.navigate('BuiltInGuides')}>
+          <CopyText language={language} style={styles.link}>{language === 'ur' ? 'سب دیکھیں' : 'See all'}</CopyText>
+        </Pressable>
+      </View>
+      {builtInGroups.map(group => (
+        <AppGuideGroupCard
+          key={group.appPackage}
+          group={group}
+          language={language}
+          expanded={Boolean(expandedApps[group.appPackage])}
+          onToggle={() =>
+            setExpandedApps(current => ({
+              ...current,
+              [group.appPackage]: !current[group.appPackage],
+            }))
+          }
+          onStart={begin}
+        />
+      ))}
+
       <View style={styles.sectionRow}>
         <CopyText language={language} style={styles.sectionTitle}>{language === 'ur' ? 'کمیونٹی' : 'Community'}</CopyText>
         <Pressable accessibilityRole="button" onPress={() => navigation.navigate(session ? 'Guides' : 'Account')}>

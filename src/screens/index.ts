@@ -4,6 +4,8 @@ export {OnboardingScreen} from './OnboardingScreen';
 export {HomeScreen} from './HomeScreen';
 export {AccountScreen} from './AccountScreen';
 export {GuidesScreen} from './GuidesScreen';
+export {BuiltInGuidesScreen} from './BuiltInGuidesScreen';
+export {VoiceTourScreen} from './VoiceTourScreen';
 export {GuideEditorScreen} from './GuideEditorScreen';
 export {SettingsScreen} from './SettingsScreen';
 export {CelebrationScreen} from './CelebrationScreen';

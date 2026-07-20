@@ -6,7 +6,15 @@ import {styles} from '../theme/styles';
 import {Language} from '../types/app';
 import {copyFor} from '../utils/copy';
 
-export function PermissionsScreen({navigation, language}: {navigation: any; language: Language}) {
+export function PermissionsScreen({
+  navigation,
+  language,
+  setLanguage,
+}: {
+  navigation: any;
+  language: Language;
+  setLanguage: (language: Language) => void;
+}) {
   const c = copyFor(language);
   const [overlay, setOverlay] = useState(false);
   const [accessibility, setAccessibility] = useState(false);
@@ -30,7 +38,7 @@ export function PermissionsScreen({navigation, language}: {navigation: any; lang
   }, [overlay, accessibility, navigation]);
   const current = !overlay ? c.permissions.overlay : c.permissions.accessibility;
   return (
-    <Screen>
+    <Screen language={language} setLanguage={setLanguage}>
       <CopyText language={language} style={styles.eyebrow}>{c.permissions.setup}</CopyText>
       <CopyText language={language} style={styles.title}>{current.headline}</CopyText>
       <CopyText language={language} style={styles.body}>{current.body}</CopyText>

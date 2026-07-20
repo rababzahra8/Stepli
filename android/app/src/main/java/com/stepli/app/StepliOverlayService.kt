@@ -14,6 +14,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import kotlin.math.abs
 
 /** Renderer only. It does not and cannot interact with another app's UI. */
 object StepliOverlayService {
@@ -30,7 +31,11 @@ object StepliOverlayService {
     removeViews()
     step = nextStep
     wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-    val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE
+    val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+    } else {
+      WindowManager.LayoutParams.TYPE_PHONE
+    }
     val flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
 
     // The highlight must never consume touches intended for the app underneath.
@@ -39,10 +44,23 @@ object StepliOverlayService {
 
     val card = LinearLayout(context).apply {
       orientation = LinearLayout.VERTICAL
-      setPadding(dp(context, 22), dp(context, 18), dp(context, 22), dp(context, 18))
+      setPadding(dp(context, 18), dp(context, 14), dp(context, 18), dp(context, 16))
       background = round(Color.rgb(168, 195, 160), dp(context, 22))
     }
-    val header = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+    val header = LinearLayout(context).apply {
+      orientation = LinearLayout.HORIZONTAL
+      gravity = Gravity.CENTER_VERTICAL
+    }
+    header.addView(
+      ImageView(context).apply {
+        setImageResource(R.drawable.stepli_bot)
+        scaleType = ImageView.ScaleType.FIT_CENTER
+        contentDescription = "Stepli"
+      },
+      LinearLayout.LayoutParams(dp(context, 40), dp(context, 40)).apply {
+        marginEnd = dp(context, 8)
+      },
+    )
     header.addView(TextView(context).apply {
       text = nextStep.progress
       setTextColor(Color.rgb(110, 139, 114))
@@ -70,15 +88,24 @@ object StepliOverlayService {
     card.addView(TextView(context).apply {
       text = nextStep.text
       setTextColor(Color.rgb(40, 68, 53))
-      textSize = 18f
+      textSize = 17f
       setPadding(0, dp(context, 8), 0, dp(context, 12))
     })
+    val isUrdu = nextStep.language.equals("ur", ignoreCase = true)
     val shouldSpeak = voiceEnabled(context)
     if (shouldSpeak) {
-      val replayLabel = if (nextStep.language.equals("ur", ignoreCase = true)) "🔊  یہ قدم سنیں" else "🔊  Hear this step"
+      val replayLabel = if (isUrdu) "🔊  یہ قدم سنیں" else "🔊  Hear this step"
       card.addView(actionButton(context, replayLabel, Color.rgb(110, 139, 114)) {
         speaker?.speak(nextStep.spokenText, nextStep.language)
       })
+    }
+    if (nextStep.canGoBack) {
+      val backLabel = if (isUrdu) "↩  پچھلا قدم دوبارہ سنیں" else "↩  Hear last step again"
+      card.addView(
+        actionButton(context, backLabel, Color.rgb(110, 139, 114)) {
+          StepliOverlayModule.emit("stepliStepBack", nextStep.id)
+        }.apply { (layoutParams as? LinearLayout.LayoutParams)?.topMargin = dp(context, 8) },
+      )
     }
     card.addView(actionButton(context, "✓  ${nextStep.confirm}", Color.rgb(200, 109, 69)) {
       StepliAccessibilityService.emitStepConfirmed(nextStep.id)
@@ -87,55 +114,40 @@ object StepliOverlayService {
     val bubble = FrameLayout(context).apply {
       background = round(Color.rgb(168, 195, 160), dp(context, 28))
       contentDescription = "Show or hide Stepli guidance"
+      setOnClickListener {
+        card.visibility = if (card.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+      }
     }
     bubble.addView(ImageView(context).apply {
       setImageResource(R.drawable.stepli_bot)
       scaleType = ImageView.ScaleType.FIT_CENTER
     }, FrameLayout.LayoutParams(dp(context, 46), dp(context, 46), Gravity.CENTER))
-    val container = LinearLayout(context).apply {
+
+    val container = DraggableOverlayPanel(context).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.END
       addView(card, LinearLayout.LayoutParams(dp(context, 300), -2).apply { bottomMargin = dp(context, 10) })
       addView(bubble, LinearLayout.LayoutParams(dp(context, 56), dp(context, 56)))
-    }
-
-    val slop = ViewConfiguration.get(context).scaledTouchSlop
-    var downX = 0f
-    var downY = 0f
-    var startX = 0
-    var startY = 0
-    var moved = false
-    bubble.setOnTouchListener { _, event ->
-      when (event.action) {
-        MotionEvent.ACTION_DOWN -> {
-          downX = event.rawX
-          downY = event.rawY
-          startX = panelParams?.x ?: 0
-          startY = panelParams?.y ?: 0
-          moved = false
-          true
-        }
-        MotionEvent.ACTION_MOVE -> {
-          val dx = event.rawX - downX
-          val dy = event.rawY - downY
-          if (!moved && (kotlin.math.abs(dx) > slop || kotlin.math.abs(dy) > slop)) moved = true
-          if (moved) panelParams?.let { params ->
-            params.x = startX - dx.toInt()
-            params.y = startY - dy.toInt()
-            try { wm?.updateViewLayout(container, params) } catch (_: IllegalArgumentException) { }
+      onDrag = { dx, dy ->
+        panelParams?.let { params ->
+          params.x = params.x - dx
+          params.y = params.y - dy
+          try {
+            wm?.updateViewLayout(this, params)
+          } catch (_: IllegalArgumentException) {
           }
-          true
         }
-        MotionEvent.ACTION_UP -> {
-          if (!moved) card.visibility = if (card.visibility == View.VISIBLE) View.GONE else View.VISIBLE
-          true
-        }
-        else -> true
       }
     }
 
     panel = container
-    panelParams = WindowManager.LayoutParams(dp(context, 300), -2, type, flags or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM, -3).apply {
+    panelParams = WindowManager.LayoutParams(
+      dp(context, 300),
+      -2,
+      type,
+      flags or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM,
+      -3,
+    ).apply {
       gravity = Gravity.BOTTOM or Gravity.END
       x = dp(context, 18)
       y = dp(context, 32)
@@ -151,6 +163,21 @@ object StepliOverlayService {
   fun highlight(left: Int, top: Int, right: Int, bottom: Int) = ring?.setBounds(left, top, right, bottom)
   fun clearHighlight() = ring?.clear()
   fun stopSpeech() = speaker?.stop()
+
+  /**
+   * Speaks guidance without showing the overlay card. Used for the in-app
+   * “How to use Stepli” voice tour.
+   */
+  fun speakGuidance(context: Context, text: String, language: String) {
+    if (text.isBlank() || !voiceEnabled(context)) return
+    speaker = speaker ?: GuidanceSpeaker(context.applicationContext)
+    speaker?.speak(text, language)
+  }
+
+  /** Stops speech without closing an active overlay navigator. */
+  fun stopGuidanceSpeech() {
+    speaker?.stop()
+  }
 
   fun currentStep(): OverlayStep? = step
 
@@ -186,7 +213,71 @@ object StepliOverlayService {
     layoutParams = LinearLayout.LayoutParams(-1, -2)
   }
 
-  private fun voiceEnabled(context: Context) = context.getSharedPreferences("stepli", Context.MODE_PRIVATE).getBoolean("voiceGuidance", true)
-  private fun round(color: Int, radius: Int) = GradientDrawable().apply { setColor(color); cornerRadius = radius.toFloat() }
-  private fun dp(context: Context, value: Int) = (value * context.resources.displayMetrics.density).toInt()
+  private fun voiceEnabled(context: Context) =
+    context.getSharedPreferences("stepli", Context.MODE_PRIVATE).getBoolean("voiceGuidance", true)
+
+  private fun round(color: Int, radius: Int) = GradientDrawable().apply {
+    setColor(color)
+    cornerRadius = radius.toFloat()
+  }
+
+  private fun dp(context: Context, value: Int) =
+    (value * context.resources.displayMetrics.density).toInt()
+}
+
+/**
+ * Drags the whole overlay (card + bubble). Clicks on buttons still work because
+ * we only intercept after the finger moves past the touch slop.
+ */
+private class DraggableOverlayPanel(context: Context) : LinearLayout(context) {
+  var onDrag: ((dx: Int, dy: Int) -> Unit)? = null
+
+  private val slop = ViewConfiguration.get(context).scaledTouchSlop
+  private var downRawX = 0f
+  private var downRawY = 0f
+  private var lastRawX = 0f
+  private var lastRawY = 0f
+  private var dragging = false
+
+  override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
+    when (ev.actionMasked) {
+      MotionEvent.ACTION_DOWN -> {
+        downRawX = ev.rawX
+        downRawY = ev.rawY
+        lastRawX = ev.rawX
+        lastRawY = ev.rawY
+        dragging = false
+        return false
+      }
+      MotionEvent.ACTION_MOVE -> {
+        if (!dragging && (abs(ev.rawX - downRawX) > slop || abs(ev.rawY - downRawY) > slop)) {
+          dragging = true
+          parent?.requestDisallowInterceptTouchEvent(true)
+          return true
+        }
+      }
+    }
+    return false
+  }
+
+  override fun onTouchEvent(event: MotionEvent): Boolean {
+    when (event.actionMasked) {
+      MotionEvent.ACTION_MOVE -> {
+        if (dragging) {
+          val dx = (event.rawX - lastRawX).toInt()
+          val dy = (event.rawY - lastRawY).toInt()
+          lastRawX = event.rawX
+          lastRawY = event.rawY
+          onDrag?.invoke(dx, dy)
+        }
+        return true
+      }
+      MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+        val wasDragging = dragging
+        dragging = false
+        return wasDragging
+      }
+    }
+    return dragging
+  }
 }

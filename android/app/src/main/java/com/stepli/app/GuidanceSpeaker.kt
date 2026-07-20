@@ -33,19 +33,12 @@ class GuidanceSpeaker(context: Context) : TextToSpeech.OnInitListener {
     tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "stepli-guidance")
   }
 
-  /**
-   * TextToSpeech may accept a locale but retain its previous voice. Confirm
-   * that the selected voice is Urdu before allowing Urdu narration to play.
-   */
   private fun selectLanguage(language: String): Boolean {
     if (!language.equals("ur", ignoreCase = true)) {
-      return tts.setLanguage(Locale.US) >= TextToSpeech.LANG_AVAILABLE
+      return TtsVoiceHelper.hasEnglishVoice(tts) ||
+        tts.setLanguage(Locale.US) >= TextToSpeech.LANG_AVAILABLE
     }
-    val urduLocales = listOf(Locale.forLanguageTag("ur-PK"), Locale.forLanguageTag("ur"))
-    return urduLocales.any { locale ->
-      val result = tts.setLanguage(locale)
-      result >= TextToSpeech.LANG_AVAILABLE && (tts.voice?.locale?.language?.equals("ur", ignoreCase = true) ?: true)
-    }
+    return TtsVoiceHelper.hasUrduVoice(tts)
   }
 
   private fun showMissingUrduVoiceMessage() {
@@ -53,9 +46,10 @@ class GuidanceSpeaker(context: Context) : TextToSpeech.OnInitListener {
     showedMissingUrduVoiceMessage = true
     Toast.makeText(
       appContext,
-      "اردو آواز کے لیے فون کی ٹیکسٹ ٹو اسپیچ سیٹنگز میں اردو (پاکستان) کی آواز انسٹال کریں۔",
+      "اردو آواز انسٹال نہیں ہے۔ Settings کھل رہے ہیں — Urdu / اردو (Pakistan یا India) والی آواز ڈاؤن لوڈ کریں۔",
       Toast.LENGTH_LONG,
     ).show()
+    TtsVoiceHelper.openSettings(appContext)
   }
 
   fun stop() {

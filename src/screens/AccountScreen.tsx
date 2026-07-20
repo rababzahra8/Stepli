@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {Alert, TextInput, View} from 'react-native';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
-import {Back, Button, CopyText, Screen} from '../components/ui';
+import {Button, CopyText, Screen} from '../components/ui';
 import {AuthSession, tutorialRepository} from '../services/TutorialRepository';
 import {styles} from '../theme/styles';
 import {Language} from '../types/app';
@@ -10,11 +10,13 @@ import {errorMessage, friendlyAuthMessage, logAuthError} from '../utils/authErro
 export function AccountScreen({
   navigation,
   language,
+  setLanguage,
   session,
   setSession,
 }: {
   navigation: any;
   language: Language;
+  setLanguage: (language: Language) => void;
   session: AuthSession | null;
   setSession: (session: AuthSession | null) => void;
 }) {
@@ -96,8 +98,7 @@ export function AccountScreen({
     }
   };
   return (
-    <Screen scroll>
-      <Back navigation={navigation} language={language} />
+    <Screen scroll language={language} setLanguage={setLanguage} navigation={navigation}>
       <CopyText language={language} style={styles.title}>{language === 'ur' ? 'اکاؤنٹ' : 'Account'}</CopyText>
       {!configured ? (
         <View style={styles.notice}>

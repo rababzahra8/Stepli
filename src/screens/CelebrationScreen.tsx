@@ -5,10 +5,20 @@ import {styles} from '../theme/styles';
 import {Language} from '../types/app';
 import {copyFor} from '../utils/copy';
 
-export function CelebrationScreen({navigation, route, language}: {navigation: any; route: {params?: {title?: string}}; language: Language}) {
+export function CelebrationScreen({
+  navigation,
+  route,
+  language,
+  setLanguage,
+}: {
+  navigation: any;
+  route: {params?: {title?: string}};
+  language: Language;
+  setLanguage: (language: Language) => void;
+}) {
   const c = copyFor(language);
   return (
-    <Screen>
+    <Screen language={language} setLanguage={setLanguage}>
       <Text style={styles.celebrate}>🎉</Text>
       <CopyText language={language} style={styles.title}>{c.celebration.headline}</CopyText>
       <CopyText language={language} style={styles.body}>

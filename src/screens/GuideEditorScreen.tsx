@@ -1,6 +1,6 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import {Alert, Pressable, ScrollView, Switch, Text, TextInput, View} from 'react-native';
-import {Back, Button, CopyText, Loader, Screen} from '../components/ui';
+import {Button, CopyText, Loader, Screen} from '../components/ui';
 import {InstalledApp, TutorialDraft, TutorialStep} from '../models/tutorial';
 import {tutorialRepository} from '../services/TutorialRepository';
 import {StepliOverlay} from '../native/StepliOverlay';
@@ -9,7 +9,15 @@ import {styles} from '../theme/styles';
 import {Language} from '../types/app';
 import {errorMessage} from '../utils/authErrors';
 
-export function GuideEditorScreen({navigation, language}: {navigation: any; language: Language}) {
+export function GuideEditorScreen({
+  navigation,
+  language,
+  setLanguage,
+}: {
+  navigation: any;
+  language: Language;
+  setLanguage: (language: Language) => void;
+}) {
   const [apps, setApps] = useState<InstalledApp[]>([]);
   const [appQuery, setAppQuery] = useState('');
   const [showApps, setShowApps] = useState(false);
@@ -80,8 +88,7 @@ export function GuideEditorScreen({navigation, language}: {navigation: any; lang
     }
   };
   return (
-    <Screen scroll>
-      <Back navigation={navigation} language={language} />
+    <Screen scroll language={language} setLanguage={setLanguage} navigation={navigation}>
       <CopyText language={language} style={styles.title}>{language === 'ur' ? 'نیا گائیڈ' : 'New guide'}</CopyText>
       <Button
         secondary

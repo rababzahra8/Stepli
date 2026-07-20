@@ -16,7 +16,34 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
 }));
 
 jest.mock('../src/native/StepliOverlay', () => ({
-  StepliOverlay: {getLanguage: jest.fn().mockResolvedValue(null), setLanguage: jest.fn().mockResolvedValue(null), getOnboardingComplete: jest.fn().mockResolvedValue(false), setOnboardingComplete: jest.fn().mockResolvedValue(null), canDrawOverlays: jest.fn().mockResolvedValue(false), isAccessibilityEnabled: jest.fn().mockResolvedValue(false), getVoiceGuidance: jest.fn().mockResolvedValue(true), setVoiceGuidance: jest.fn().mockResolvedValue(null), getLaunchableApps: jest.fn().mockResolvedValue([]), launchApp: jest.fn().mockResolvedValue(false), launchFoodpanda: jest.fn().mockResolvedValue(false), showStep: jest.fn().mockResolvedValue(null), closeNavigator: jest.fn(), hide: jest.fn(), getTutorialBackendConfig: jest.fn().mockResolvedValue(null), getTutorialSession: jest.fn().mockResolvedValue(null), setTutorialSession: jest.fn().mockResolvedValue(null), clearTutorialSession: jest.fn().mockResolvedValue(null)},
+  StepliOverlay: {
+    getLanguage: jest.fn().mockResolvedValue(null),
+    setLanguage: jest.fn().mockResolvedValue(null),
+    getOnboardingComplete: jest.fn().mockResolvedValue(false),
+    setOnboardingComplete: jest.fn().mockResolvedValue(null),
+    canDrawOverlays: jest.fn().mockResolvedValue(false),
+    isAccessibilityEnabled: jest.fn().mockResolvedValue(false),
+    getVoiceGuidance: jest.fn().mockResolvedValue(true),
+    setVoiceGuidance: jest.fn().mockResolvedValue(null),
+    getLaunchableApps: jest.fn().mockResolvedValue([]),
+    launchApp: jest.fn().mockResolvedValue(false),
+    launchFoodpanda: jest.fn().mockResolvedValue(false),
+    showStep: jest.fn().mockResolvedValue(null),
+    closeNavigator: jest.fn(),
+    hide: jest.fn(),
+    getTutorialBackendConfig: jest.fn().mockResolvedValue(null),
+    getTutorialSession: jest.fn().mockResolvedValue(null),
+    setTutorialSession: jest.fn().mockResolvedValue(null),
+    clearTutorialSession: jest.fn().mockResolvedValue(null),
+    isUrduVoiceAvailable: jest.fn().mockResolvedValue(true),
+    getInstalledTtsLanguages: jest.fn().mockResolvedValue([
+      {code: 'en', label: 'English', detail: 'English (US / UK)', available: true},
+      {code: 'ur', label: 'Urdu', detail: 'Urdu / اردو — Pakistan or India', available: false},
+    ]),
+    openTextToSpeechSettings: jest.fn(),
+    speak: jest.fn().mockResolvedValue(null),
+    stopSpeech: jest.fn().mockResolvedValue(null),
+  },
 }));
 
 test('renders correctly', async () => {
