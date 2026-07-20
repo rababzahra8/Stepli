@@ -2,6 +2,24 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+// Local development configuration. Only Supabase's URL and publishable/anon
+// key are exposed to the app; never put a database password or service-role
+// key in this file.
+def stepliEnv = new Properties()
+def stepliEnvFile = rootProject.file("../.env")
+if (stepliEnvFile.exists()) {
+    stepliEnvFile.withInputStream { stream -> stepliEnv.load(stream) }
+}
+def stepliConfig = { name, fallback ->
+    System.getenv(name) ?: project.findProperty(name) ?: stepliEnv.getProperty(name) ?: fallback
+}
+def stepliSupabaseUrl = stepliConfig("STEPLI_SUPABASE_URL", "")
+def stepliSupabaseAnonKey = stepliConfig("STEPLI_SUPABASE_ANON_KEY", "")
+// OAuth client IDs identify an app to Google; they are safe to include in the
+// client, unlike a Google client secret.
+def stepliGoogleWebClientId = stepliConfig("STEPLI_GOOGLE_WEB_CLIENT_ID", "")
+def asBuildConfigString = { value -> "\"${value.toString().replace('\\', '\\\\').replace('\"', '\\\"')}\"" }
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -78,12 +96,18 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.stepli.app"
+    buildFeatures {
+        buildConfig true
+    }
     defaultConfig {
         applicationId "com.stepli.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        buildConfigField "String", "STEPLI_SUPABASE_URL", asBuildConfigString(stepliSupabaseUrl)
+        buildConfigField "String", "STEPLI_SUPABASE_ANON_KEY", asBuildConfigString(stepliSupabaseAnonKey)
+        buildConfigField "String", "STEPLI_GOOGLE_WEB_CLIENT_ID", asBuildConfigString(stepliGoogleWebClientId)
     }
     signingConfigs {
         debug {

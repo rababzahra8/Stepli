@@ -3,9 +3,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
-    <!-- Android 11+ requires explicit visibility before we can detect or launch Foodpanda. -->
+    <!-- Android 11+ package visibility for Foodpanda plus user-authored guides to launchable apps. -->
     <queries>
       <package android:name="com.global.foodpanda.android" />
+      <intent>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent>
     </queries>
 
     <application
