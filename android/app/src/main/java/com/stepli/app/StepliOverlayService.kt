@@ -94,7 +94,7 @@ object StepliOverlayService {
     val isUrdu = nextStep.language.equals("ur", ignoreCase = true)
     val shouldSpeak = voiceEnabled(context)
     if (shouldSpeak) {
-      val replayLabel = if (isUrdu) "🔊  یہ قدم سنیں" else "🔊  Hear this step"
+      val replayLabel = if (isUrdu) "🔊  یہ قدم سنیں" else "🔊  Read this step"
       card.addView(actionButton(context, replayLabel, Color.rgb(110, 139, 114)) {
         speaker?.speak(nextStep.spokenText, nextStep.language)
       })

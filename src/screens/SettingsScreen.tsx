@@ -71,8 +71,8 @@ export function SettingsScreen({
     }
   };
 
-  const stepliVoices = ttsLanguages.filter(item => item.code === 'en' || item.code === 'ur');
-  const otherVoices = ttsLanguages.filter(item => item.code !== 'en' && item.code !== 'ur');
+  const stepliVoices = ttsLanguages.filter(item => item.code === 'en' || item.code === 'ur' || item.code === 'engine');
+  const otherVoices = ttsLanguages.filter(item => item.code !== 'en' && item.code !== 'ur' && item.code !== 'engine');
 
   return (
     <Screen scroll language={language} setLanguage={setLanguage} navigation={navigation}>
@@ -94,8 +94,8 @@ export function SettingsScreen({
       </CopyText>
       <CopyText language={language} style={styles.hint}>
         {language === 'ur'
-          ? 'فون پر انسٹال آوازیں چیک کریں۔ اردو کے لیے Urdu / Pakistan / India / اردو ڈاؤن لوڈ کریں۔'
-          : 'Check which speech voices are installed. For Urdu, download Urdu / Pakistan / India / اردو.'}
+          ? 'نوٹ: Speech recognition الگ چیز ہے۔ Samsung TTS میں اکثر اردو نہیں ہوتی — Preferred engine کو Google Text-to-speech بنائیں، پھر Urdu (Pakistan) ڈاؤن لوڈ کریں۔'
+          : 'Note: Speech recognition is different. Samsung TTS often has no Urdu — set Preferred engine to Google Text-to-speech, then download Urdu (Pakistan).'}
       </CopyText>
       {checkingVoices ? (
         <Loader language={language} label={language === 'ur' ? 'چیک ہو رہا ہے…' : 'Checking voices…'} />

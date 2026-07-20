@@ -4,29 +4,29 @@
 
 **Suggested submission category:** Accessibility & Inclusion (or the closest matching category in the challenge form).
 
-Stepli is an Android accessibility companion designed for people who feel less confident using everyday digital services. Its first built-in tutorial guides a person through ordering food with Foodpanda in English or Urdu. Rather than taking over the task, Stepli opens the chosen app, displays a small movable instruction card over it, highlights the next relevant control when it can find it, and lets the person confirm each step themselves. People can also create reusable guides for other installed apps.
+Stepli is an Android accessibility companion designed for people who feel less confident using everyday digital services. It includes bilingual guides for Foodpanda, Instagram, WhatsApp, and YouTube, and its data-driven guide model can support many more apps and tasks. Rather than taking over a task, Stepli opens the chosen app, displays a small movable instruction card over it, highlights the next relevant control when it can find it, and lets the person confirm each step themselves. People can also create reusable guides for other installed apps.
 
 ## The idea
 
 Many apps assume that everyone is comfortable with search, checkout, addresses, delivery options, and payment screens. Stepli turns a potentially intimidating flow into calm, plain-language guidance. The user chooses a language, grants only the permissions required for visual guidance, then follows a short sequence of instructions at their own pace.
 
-The prototype focuses on a practical first use case: ordering food through Foodpanda. The tutorial covers location setup, search, selecting a restaurant and dish, cart review, address, delivery, payment, and the final order review.
+Foodpanda ordering is one practical use case: its guide covers location setup, search, selecting a restaurant and dish, cart review, address, delivery, payment, and final order review. The current guide library also includes Instagram posting and Stories, WhatsApp messaging, and YouTube search.
 
 ### The story behind Stepli
 
-The idea came from seeing an older family member ask younger relatives to order food, book a ride, and complete other everyday phone tasks. The need is not about intelligence; it is about digital confidence. Stepli is intended to make those moments less dependent on a nearby family member and help people complete the next task independently.
+I built Stepli after seeing my mother, and other older family members, ask younger relatives to order food, book a ride, send a message, or complete other everyday phone tasks. The need is not about intelligence; it is about digital confidence. Stepli is intended to make those moments less dependent on a nearby family member and help people complete the next task independently.
 
 ### Version 1: the original LLM idea - planned for the future
 
 The first version of the idea was an LLM-powered screen analyser and assistant. It would understand the current app screen and generate context-aware, conversational guidance instead of relying on a fixed sequence of instructions.
 
-I did not continue with this first version because the required GPT-5.6 API access was not available to me on the free tier. This LLM-based version was therefore not built into the submitted project. I plan to return to it in the future when suitable API access is available.
+I could not continue with the LLM-powered or agent-based version because I did not have access to the required OpenAI API keys. Rather than give up on Stepli, I built the current manual, data-driven guide system instead. The GPT-5.6-powered idea is still in progress, but it is **not included in this submission**: the submitted app does not call GPT-5.6 or any other runtime LLM. I plan to return to it later with suitable API access, privacy safeguards, and user consent.
 
-### Version 2: the current master build
+### The submitted build
 
-Rather than stop the project, I created a second version in the `master` branch: curated, hard-coded, bilingual dialogues for a known Foodpanda flow, supported by Android accessibility hints and a floating guidance card. This is the implementation included in this repository and demonstrated for the challenge.
+The `master` branch contains the submitted implementation: curated, data-driven bilingual guides, supported by Android accessibility hints and a floating guidance card. It currently includes Foodpanda, Instagram, WhatsApp, and YouTube workflows, and it can be extended with as many additional guides as needed.
 
-The current version is still useful: it gives people calm, one-step-at-a-time guidance, optional highlights, and manual control for a real task today. The tutorial is data-driven, so it is also a foundation for adding more supported apps and workflows when the LLM-powered analyser is revisited.
+The current version gives people calm, one-step-at-a-time guidance, optional highlights, and manual control for real tasks today. Its guide model is data-driven, so I can add more apps and workflows without changing the core guidance experience.
 
 ### Future direction
 
@@ -60,11 +60,11 @@ With appropriate production API access, privacy safeguards, and user consent, St
 | Navigation | React Navigation native stack |
 | Android integration | Kotlin, Android AccessibilityService, WindowManager overlay, React Native native module bridge |
 | Data and localization | TypeScript tutorial data, English and Urdu string files, Android SharedPreferences for language/onboarding/voice state; optional Supabase/Postgres for shared user guides |
-| AI direction | Version 1's GPT-5.6 LLM screen analyser is planned for the future; it is not included in the current Version 2 master build because the required API access was unavailable on the free tier |
+| AI direction | A GPT-5.6 screen-analysis concept is future work only. It is still in progress and is not included in this submitted build; the app makes no runtime LLM calls. |
 | Build tooling | Node.js, npm, Metro, Gradle, Android Studio / Android SDK |
 | Testing and quality | Jest and ESLint |
 
-The product experience lives in `App.tsx`. The Foodpanda steps are intentionally data-driven in `src/data/foodpandaSteps.ts`, and user-created guide data uses the same model. The Android overlay and accessibility implementation is in `android/app/src/main/java/com/stepli/app/`.
+The product experience lives in `App.tsx`. The built-in guides are intentionally data-driven in `src/data/`, and user-created guide data uses the same model. The Android overlay and accessibility implementation is in `android/app/src/main/java/com/stepli/app/`.
 
 ## Requirements
 
@@ -113,7 +113,7 @@ Android presents the accessibility-service settings separately from the app beca
 
 ### Demo data
 
-No external seed data or backend is required for the submitted demo. The Foodpanda tutorial is bundled with the app in [`src/data/foodpandaSteps.ts`](src/data/foodpandaSteps.ts), with English and Urdu copy in `src/strings/`.
+No external seed data or backend is required for the submitted demo. The built-in guides are bundled in [`src/data/`](src/data/), including Foodpanda, Instagram, WhatsApp, and YouTube guides, with English and Urdu copy in `src/strings/`.
 
 Foodpanda may change labels, screen order, or availability by country and app version. Each card has a manual confirmation button so the guide remains usable when an optional location or promotional screen is skipped or a matching UI label changes.
 
@@ -149,12 +149,12 @@ Stepli is deliberately designed as assistance, not automation:
 - It relies on lightweight matchers rather than storing a screen recording, screenshots, keyboard input, or a full accessibility-tree history.
 - The final decision to place an order and any payment action always remains with the user.
 
-## How Codex and GPT-5.6 accelerated this project
+## How Codex supported development
 
-Stepli was built with Codex using GPT-5.6 as a hands-on development partner. Codex accelerated both the product design and implementation work by helping the team:
+I used Codex as a development partner while designing and implementing the current guide-based product. It helped me:
 
 - turn the inclusion problem into a focused, testable first use case: an English/Urdu, step-by-step Foodpanda guide;
-- turn the original LLM screen-analyser concept into a useful Version 2 build after the necessary GPT-5.6 API access was unavailable on the free tier;
+- turn the original screen-analysis idea into a useful, guide-based build that can be tested and used today;
 - design the React Native screen flow for language selection, permission education, onboarding, home, settings, and completion;
 - build the Android bridge between the TypeScript app and Kotlin code;
 - implement the native overlay card and highlight ring while preserving touch access to the app underneath;
@@ -162,14 +162,14 @@ Stepli was built with Codex using GPT-5.6 as a hands-on development partner. Cod
 - structure tutorial content as localized, reusable data instead of hard-coding it into each screen; and
 - iterate on permissions copy and safety constraints so that the product clearly communicates user control.
 
-The key product decision was to preserve the mission - teaching rather than automating - while changing the implementation from Version 1's planned LLM screen analyser to a Version 2 build that could be developed and tested with the available access. GPT-5.6 and Codex helped explore that tradeoff, shape the native-module boundary, and turn the AI-first idea into the current privacy-conscious prototype. The runtime LLM screen analyser remains a future direction, not a claim of the submitted build.
+The key product decision was to preserve the mission—teaching rather than automating—while building a reliable, privacy-conscious guide system first. The separate GPT-5.6 screen-analysis concept remains future work; it has no runtime codepath in the submitted application.
 
 ## Submission details
 
 - **Repository:** https://github.com/rababzahra8/Stepli
 - **Category:** Accessibility & Inclusion (select the closest available official category)
-- **Project description:** Stepli is a bilingual Android accessibility companion that guides users through Foodpanda ordering with an overlay card and optional visual highlights, while the user performs every action themselves.
-- **Demo video:** Record and add a public YouTube link before submitting. Keep it under three minutes and show: language selection, the two permission steps, the Foodpanda guide in action, and a short explanation of the Codex/GPT-5.6 workflow above.
+- **Project description:** Stepli is a bilingual Android accessibility companion that guides users through tasks in apps such as Foodpanda, Instagram, WhatsApp, and YouTube with an overlay card and optional visual highlights, while the user performs every action themselves.
+- **Demo video:** Record and add a public YouTube link before submitting. Keep it under three minutes and show: language selection, the two permission steps, one or more guides in action, and the read-only, user-controlled guidance experience.
 - **Codex feedback session ID:** In the Codex session where the majority of the core functionality was built, run `/feedback` and paste the resulting session ID into the challenge submission form: `<!-- PASTE_CODEX_FEEDBACK_SESSION_ID_HERE -->`.
 
 Before making the repository public, add an appropriate open-source license and ensure that no credentials, API keys, personal test data, or private `.env` values are committed.

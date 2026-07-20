@@ -86,7 +86,7 @@ export function VoiceTourScreen({
         <Button
           secondary
           rtl={language === 'ur'}
-          label={language === 'ur' ? '🔊  یہ قدم سنیں' : '🔊  Hear this step'}
+          label={language === 'ur' ? '🔊  یہ قدم سنیں' : '🔊  Read this step'}
           onPress={() => void speakStep(index)}
         />
         {canGoBack ? (

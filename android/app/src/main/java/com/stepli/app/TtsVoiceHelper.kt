@@ -2,6 +2,8 @@ package com.stepli.app
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -15,29 +17,50 @@ import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Probes the device Text-to-speech engine for installed voices.
- * Stepli needs this before Urdu (and to show users which languages are ready).
+ * On Samsung, the default Samsung TTS often has no Urdu — Google TTS does.
  */
 object TtsVoiceHelper {
+  const val GOOGLE_TTS_PACKAGE = "com.google.android.tts"
+
   /** Locale tags people may see when installing Urdu voice data. */
   val URDU_LOCALE_TAGS = listOf("ur-PK", "ur-IN", "ur")
 
   /** Locale tags that count as English for narration. */
   val ENGLISH_LOCALE_TAGS = listOf("en-US", "en-GB", "en")
 
+  fun isGoogleTtsInstalled(context: Context): Boolean =
+    try {
+      context.packageManager.getPackageInfo(GOOGLE_TTS_PACKAGE, 0)
+      true
+    } catch (_: PackageManager.NameNotFoundException) {
+      false
+    }
+
   fun openSettings(context: Context) {
     val appContext = context.applicationContext
-    val intents = listOf(
-      Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA),
-      Intent("com.android.settings.TTS_SETTINGS"),
-      Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS),
-    )
+    val intents = mutableListOf<Intent>()
+    if (isGoogleTtsInstalled(appContext)) {
+      // Opens Google's voice-data installer when possible (needed on Samsung).
+      intents += Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA).setPackage(GOOGLE_TTS_PACKAGE)
+      intents += Intent("com.android.settings.TTS_SETTINGS")
+    } else {
+      intents += Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$GOOGLE_TTS_PACKAGE"))
+      intents += Intent(
+        Intent.ACTION_VIEW,
+        Uri.parse("https://play.google.com/store/apps/details?id=$GOOGLE_TTS_PACKAGE"),
+      )
+    }
+    intents += Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA)
+    intents += Intent("com.android.settings.TTS_SETTINGS")
+    intents += Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+
     for (intent in intents) {
       try {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         appContext.startActivity(intent)
         return
       } catch (_: Exception) {
-        // Try the next known settings screen.
+        // Try the next known settings / store screen.
       }
     }
   }
@@ -61,18 +84,20 @@ object TtsVoiceHelper {
   fun listVoiceLanguages(context: Context): WritableArray {
     val result = Arguments.createArray()
     withEngine(context) { tts ->
-      val installed = collectInstalledLocales(tts)
-
+      val engineLabel =
+        if (isGoogleTtsInstalled(context)) "Check with Google Text-to-speech (not Speech recognition)"
+        else "Install Google Text-to-speech from Play Store first"
+      addStatusRow(result, "engine", "TTS engine tip", engineLabel, isGoogleTtsInstalled(context))
       addStatusRow(result, "en", "English", "English (US / UK)", hasEnglishVoice(tts))
       addStatusRow(
         result,
         "ur",
         "Urdu",
-        "Urdu / اردو — Pakistan or India",
+        "Urdu / اردو — Pakistan or India (Google TTS)",
         hasUrduVoice(tts),
       )
 
-      installed
+      collectInstalledLocales(tts)
         .asSequence()
         .filter { locale ->
           val lang = locale.language.lowercase(Locale.US)
@@ -122,7 +147,6 @@ object TtsVoiceHelper {
         return fromVoices
       }
     }
-    // Fallback probe for older devices / engines that omit availableLanguages.
     return (ENGLISH_LOCALE_TAGS + URDU_LOCALE_TAGS)
       .map { Locale.forLanguageTag(it) }
       .filter { tts.isLanguageAvailable(it) >= TextToSpeech.LANG_AVAILABLE }
@@ -152,13 +176,25 @@ object TtsVoiceHelper {
         (tts.voice?.locale?.language?.equals(languageCode, ignoreCase = true) ?: true)
     }
 
+  /**
+   * Prefer Google TTS when installed — Samsung's engine usually has no Urdu pack.
+   */
+  fun createEngine(context: Context, listener: TextToSpeech.OnInitListener): TextToSpeech {
+    val app = context.applicationContext
+    return if (isGoogleTtsInstalled(app)) {
+      TextToSpeech(app, listener, GOOGLE_TTS_PACKAGE)
+    } else {
+      TextToSpeech(app, listener)
+    }
+  }
+
   private fun withEngine(context: Context, block: (TextToSpeech) -> Unit) {
     val latch = CountDownLatch(1)
     val engineRef = AtomicReference<TextToSpeech?>(null)
 
     Handler(Looper.getMainLooper()).post {
       engineRef.set(
-        TextToSpeech(context.applicationContext) { status ->
+        createEngine(context) { status ->
           try {
             val engine = engineRef.get()
             if (status == TextToSpeech.SUCCESS && engine != null) {

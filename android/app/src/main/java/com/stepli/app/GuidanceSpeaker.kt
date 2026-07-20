@@ -14,7 +14,8 @@ class GuidanceSpeaker(context: Context) : TextToSpeech.OnInitListener {
   private var ready = false
   private var pending: Pair<String, String>? = null
   private var showedMissingUrduVoiceMessage = false
-  private val tts = TextToSpeech(appContext, this)
+  // Prefer Google TTS so Urdu works on Samsung (Samsung TTS often has no Urdu).
+  private val tts = TtsVoiceHelper.createEngine(appContext, this)
 
   override fun onInit(status: Int) {
     ready = status == TextToSpeech.SUCCESS
@@ -25,8 +26,6 @@ class GuidanceSpeaker(context: Context) : TextToSpeech.OnInitListener {
     if (text.isBlank()) return
     if (!ready) { pending = text to language; return }
     if (!selectLanguage(language)) {
-      // Do not let Android pronounce Urdu text with the previously selected
-      // (usually English) voice. The user needs to install an Urdu TTS voice.
       showMissingUrduVoiceMessage()
       return
     }
@@ -46,7 +45,7 @@ class GuidanceSpeaker(context: Context) : TextToSpeech.OnInitListener {
     showedMissingUrduVoiceMessage = true
     Toast.makeText(
       appContext,
-      "اردو آواز انسٹال نہیں ہے۔ Settings کھل رہے ہیں — Urdu / اردو (Pakistan یا India) والی آواز ڈاؤن لوڈ کریں۔",
+      "اردو آواز نہیں ملی۔ Samsung TTS میں اردو نہیں ہوتی — Google Text-to-speech لگائیں اور Urdu (Pakistan) ڈاؤن لوڈ کریں۔",
       Toast.LENGTH_LONG,
     ).show()
     TtsVoiceHelper.openSettings(appContext)

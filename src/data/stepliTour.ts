@@ -33,9 +33,9 @@ const en: StepliTourStep[] = [
   {
     id: 'voice',
     title: 'I speak each step',
-    body: 'I read the step out loud. Tap “Hear this step” on the card anytime you want me to say it again.',
+    body: 'I read the step out loud. Tap “Read this step” on the card anytime you want me to say it again.',
     spokenText:
-      'I speak each step out loud. If you want to hear it again, tap Hear this step on the guidance card.',
+      'I speak each step out loud. If you want to hear it again, tap Read this step on the guidance card.',
   },
   {
     id: 'control',
