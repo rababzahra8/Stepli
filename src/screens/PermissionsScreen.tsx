@@ -50,6 +50,8 @@ export function PermissionsScreen({
         <View style={styles.guide}>
           <CopyText language={language} style={styles.guideTitle}>{c.permissions.guideTitle}</CopyText>
           <CopyText language={language} style={styles.guideBody}>{c.permissions.guideBody}</CopyText>
+          <CopyText language={language} style={styles.guideBody}>{c.permissions.restrictedBody}</CopyText>
+          <Button secondary label={c.permissions.restrictedCta} rtl={language === 'ur'} onPress={() => StepliOverlay.openAppDetailsSettings()} />
         </View>
       ) : null}
       <Button

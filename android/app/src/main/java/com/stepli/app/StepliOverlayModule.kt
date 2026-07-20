@@ -35,6 +35,7 @@ class StepliOverlayModule(private val context: ReactApplicationContext) : ReactC
   @ReactMethod fun canDrawOverlays(promise: Promise) { promise.resolve(Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context)) }
   @ReactMethod fun isAccessibilityEnabled(promise: Promise) { promise.resolve(StepliAccessibilityService.isEnabled(context)) }
   @ReactMethod fun openOverlaySettings() { context.currentActivity?.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))) }
+  @ReactMethod fun openAppDetailsSettings() { context.currentActivity?.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))) }
   @ReactMethod fun openAccessibilitySettings() { context.currentActivity?.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
 
   /** Lists user-launchable apps, allowing a tutorial to target more than Foodpanda. */

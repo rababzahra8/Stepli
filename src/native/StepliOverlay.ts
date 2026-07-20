@@ -19,6 +19,7 @@ type Overlay = {
   getOnboardingComplete(): Promise<boolean>;
   setOnboardingComplete(): Promise<void>;
   openOverlaySettings(): void;
+  openAppDetailsSettings(): void;
   openAccessibilitySettings(): void;
   getVoiceGuidance(): Promise<boolean>;
   setVoiceGuidance(enabled: boolean): Promise<void>;
