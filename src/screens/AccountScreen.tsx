@@ -110,7 +110,7 @@ export function AccountScreen({
         <View style={styles.authCard}>
           <CopyText language={language} style={styles.hint}>{language === 'ur' ? 'سائن اِن' : 'Signed in'}</CopyText>
           <CopyText language={language} style={styles.cardTitle} numberOfLines={1}>{session.email || session.userId}</CopyText>
-          <CopyText language={language} style={styles.hint}>{language === 'ur' ? 'لاگ آؤٹ Settings میں ہے۔' : 'Log out is in Settings.'}</CopyText>
+          <CopyText language={language} style={styles.hint}>{language === 'ur' ? 'لاگ آؤٹ بائیں سائیڈبار میں ہے۔' : 'Log out is in the left sidebar.'}</CopyText>
         </View>
       ) : (
         <View style={styles.authCard}>

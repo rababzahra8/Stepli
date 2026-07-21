@@ -1,8 +1,7 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {Alert, Pressable, Text, View} from 'react-native';
-import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {Button, CopyText, Loader, Screen, SettingRow} from '../components/ui';
-import {AuthSession, tutorialRepository} from '../services/TutorialRepository';
+import {AuthSession} from '../services/TutorialRepository';
 import {StepliOverlay, TtsLanguageStatus} from '../native/StepliOverlay';
 import {styles} from '../theme/styles';
 import {Language} from '../types/app';
@@ -13,17 +12,14 @@ export function SettingsScreen({
   language,
   setLanguage,
   session,
-  setSession,
 }: {
   navigation: any;
   language: Language;
   setLanguage: (value: Language) => void;
   session: AuthSession | null;
-  setSession: (session: AuthSession | null) => void;
 }) {
   const c = copyFor(language);
   const [voice, setVoice] = useState(true);
-  const [busy, setBusy] = useState(false);
   const [ttsLanguages, setTtsLanguages] = useState<TtsLanguageStatus[]>([]);
   const [checkingVoices, setCheckingVoices] = useState(false);
   const [voiceListOpen, setVoiceListOpen] = useState(false);
@@ -56,21 +52,6 @@ export function SettingsScreen({
       language === 'ur' ? 'ہدایت اور آواز بند کر دی گئی۔' : 'Guidance overlay and voice were stopped.',
     );
   };
-  const signOut = async () => {
-    setBusy(true);
-    try {
-      await tutorialRepository.signOut();
-      try {
-        await GoogleSignin.signOut();
-      } catch {
-        /* Clears Google's local account choice only. */
-      }
-    } finally {
-      setSession(null);
-      setBusy(false);
-    }
-  };
-
   const stepliVoices = ttsLanguages.filter(item => item.code === 'en' || item.code === 'ur' || item.code === 'engine');
   const otherVoices = ttsLanguages.filter(item => item.code !== 'en' && item.code !== 'ur' && item.code !== 'engine');
 
@@ -162,7 +143,7 @@ export function SettingsScreen({
       {session ? (
         <View style={styles.authCard}>
           <CopyText language={language} style={styles.cardTitle} numberOfLines={1}>{session.email || session.userId}</CopyText>
-          <Button busy={busy} danger label={language === 'ur' ? 'لاگ آؤٹ' : 'Log out'} rtl={language === 'ur'} onPress={signOut} />
+          <CopyText language={language} style={styles.hint}>{language === 'ur' ? 'لاگ آؤٹ بائیں سائیڈبار میں ہے۔' : 'Log out is in the left sidebar.'}</CopyText>
         </View>
       ) : (
         <Pressable style={styles.setting} onPress={() => navigation.navigate('Account')}>

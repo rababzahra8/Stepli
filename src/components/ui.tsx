@@ -1,7 +1,9 @@
-import React, {useRef, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {ActivityIndicator, Animated, Image, Modal, Pressable, ScrollView, Switch, Text, View} from 'react-native';
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {TutorialGuide} from '../models/tutorial';
+import {AuthSession, tutorialRepository} from '../services/TutorialRepository';
 import {C} from '../theme/colors';
 import {styles} from '../theme/styles';
 import {Language} from '../types/app';
@@ -145,7 +147,10 @@ function AppHeader({
   navigation?: any;
 }) {
   const [menuVisible, setMenuVisible] = useState(false);
+  const [session, setSession] = useState<AuthSession | null>(() => tutorialRepository.currentSession());
+  const [signingOut, setSigningOut] = useState(false);
   const drawerX = useRef(new Animated.Value(-360)).current;
+  useEffect(() => tutorialRepository.subscribeSession(setSession), []);
   const openMenu = () => {
     drawerX.setValue(-360);
     setMenuVisible(true);
@@ -159,6 +164,20 @@ function AppHeader({
   };
   const openGuides = (initialTab: 'mine' | 'community' | 'all') => {
     closeMenu(() => navigation?.navigate('Guides', {initialTab}));
+  };
+  const signOut = async () => {
+    setSigningOut(true);
+    try {
+      await tutorialRepository.signOut();
+      try {
+        await GoogleSignin.signOut();
+      } catch {
+        /* Clearing Google's account picker is optional. */
+      }
+    } finally {
+      setSigningOut(false);
+      closeMenu();
+    }
   };
   return (
     <>
@@ -201,6 +220,17 @@ function AppHeader({
                 <CopyText language={language} style={styles.settingText}>{language === 'ur' ? 'سیٹنگز' : 'Settings'}</CopyText>
                 <Text style={styles.arrow}>›</Text>
               </Pressable>
+              {session ? (
+                <Pressable accessibilityRole="button" disabled={signingOut} style={[styles.menuItem, signingOut && styles.disabled]} onPress={() => void signOut()}>
+                  <CopyText language={language} style={styles.remove}>{signingOut ? (language === 'ur' ? 'لاگ آؤٹ ہو رہا ہے…' : 'Logging out…') : language === 'ur' ? 'لاگ آؤٹ' : 'Log out'}</CopyText>
+                  {signingOut ? <ActivityIndicator size="small" color={C.danger} /> : <Text style={styles.arrow}>›</Text>}
+                </Pressable>
+              ) : (
+                <Pressable accessibilityRole="button" style={styles.menuItem} onPress={() => closeMenu(() => navigation.navigate('Account'))}>
+                  <CopyText language={language} style={styles.settingText}>{language === 'ur' ? 'سائن اِن' : 'Sign in'}</CopyText>
+                  <Text style={styles.arrow}>›</Text>
+                </Pressable>
+              )}
             </Animated.View>
           </View>
         </Modal>

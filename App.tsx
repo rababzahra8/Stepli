@@ -97,7 +97,7 @@ export default function App() {
           {props => <HomeScreen {...props} language={language} setLanguage={setLanguage} session={session} />}
         </Stack.Screen>
         <Stack.Screen name="Settings">
-          {props => <SettingsScreen {...props} language={language} setLanguage={setLanguage} session={session} setSession={setSession} />}
+          {props => <SettingsScreen {...props} language={language} setLanguage={setLanguage} session={session} />}
         </Stack.Screen>
         <Stack.Screen name="Account">
           {props => <AccountScreen {...props} language={language} setLanguage={setLanguage} session={session} setSession={setSession} />}
