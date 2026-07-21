@@ -71,6 +71,36 @@ class StepliOverlayModule(private val context: ReactApplicationContext) : ReactC
     }
   }
 
+  /** Starts the target app first, then displays the guide after the app settles. */
+  @ReactMethod fun launchAppAndShowStep(
+    id: String,
+    text: String,
+    confirm: String,
+    progress: String,
+    matcher: String,
+    targetPackage: String,
+    language: String,
+    spokenText: String,
+    canGoBack: Boolean,
+    promise: Promise,
+  ) {
+    val cleanPackage = targetPackage.trim()
+    if (cleanPackage.isBlank()) { promise.resolve(false); return }
+    val intent = context.packageManager.getLaunchIntentForPackage(cleanPackage)
+    if (intent == null) { promise.resolve(false); return }
+    try {
+      intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      context.startActivity(intent)
+      StepliOverlayService.showAfterAppLaunch(
+        context.applicationContext,
+        OverlayStep(id, text, confirm, progress, matcher, cleanPackage, language, spokenText.ifBlank { text }, canGoBack),
+      )
+      promise.resolve(true)
+    } catch (error: Exception) {
+      promise.reject("launch_failed", "Could not launch target app", error)
+    }
+  }
+
   @ReactMethod fun launchFoodpanda(promise: Promise) = launchApp(FOODPANDA_PACKAGE, promise)
 
   @ReactMethod fun showStep(

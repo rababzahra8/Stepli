@@ -18,7 +18,7 @@ export function CelebrationScreen({
 }) {
   const c = copyFor(language);
   return (
-    <Screen language={language} setLanguage={setLanguage}>
+    <Screen language={language} setLanguage={setLanguage} navigation={navigation}>
       <Text style={styles.celebrate}>🎉</Text>
       <CopyText language={language} style={styles.title}>{c.celebration.headline}</CopyText>
       <CopyText language={language} style={styles.body}>

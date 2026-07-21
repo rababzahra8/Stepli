@@ -38,7 +38,7 @@ export function PermissionsScreen({
   }, [overlay, accessibility, navigation]);
   const current = !overlay ? c.permissions.overlay : c.permissions.accessibility;
   return (
-    <Screen language={language} setLanguage={setLanguage}>
+    <Screen language={language} setLanguage={setLanguage} navigation={navigation}>
       <CopyText language={language} style={styles.eyebrow}>{c.permissions.setup}</CopyText>
       <CopyText language={language} style={styles.title}>{current.headline}</CopyText>
       <CopyText language={language} style={styles.body}>{current.body}</CopyText>

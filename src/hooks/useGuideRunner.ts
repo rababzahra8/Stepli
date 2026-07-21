@@ -54,8 +54,19 @@ export function useGuideRunner(language: Language, navigation: any) {
       }
       setStarting(true);
       try {
-        await show(guide, 0);
-        const canOpen = await StepliOverlay.launchApp(guide.appPackage);
+        const firstStep = guide.steps[0];
+        setActiveGuide({guide, index: 0});
+        const canOpen = await StepliOverlay.launchAppAndShowStep(
+          firstStep.id,
+          firstStep.text,
+          firstStep.confirm,
+          `${c.settings.step} 1 ${c.common.stepOf} ${guide.steps.length}`,
+          JSON.stringify(firstStep.matcher || {}),
+          guide.appPackage,
+          language,
+          firstStep.spokenText || firstStep.text,
+          false,
+        );
         if (!canOpen) {
           StepliOverlay.closeNavigator();
           setActiveGuide(null);
@@ -77,7 +88,7 @@ export function useGuideRunner(language: Language, navigation: any) {
         setStarting(false);
       }
     },
-    [language, show],
+    [c.common.stepOf, c.settings.step, language, show],
   );
 
   useEffect(() => {

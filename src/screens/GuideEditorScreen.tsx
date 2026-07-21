@@ -20,7 +20,7 @@ export function GuideEditorScreen({
 }) {
   const [apps, setApps] = useState<InstalledApp[]>([]);
   const [appQuery, setAppQuery] = useState('');
-  const [showApps, setShowApps] = useState(false);
+  const [showApps, setShowApps] = useState(true);
   const [loadingApps, setLoadingApps] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [appName, setAppName] = useState('');
@@ -92,7 +92,7 @@ export function GuideEditorScreen({
       <CopyText language={language} style={styles.title}>{language === 'ur' ? 'نیا گائیڈ' : 'New guide'}</CopyText>
       <Button
         secondary
-        label={appName || (language === 'ur' ? 'ایپ منتخب کریں' : 'Choose app')}
+        label={appName ? (language === 'ur' ? `${appName} تبدیل کریں` : `Change app: ${appName}`) : language === 'ur' ? 'ایپ منتخب کریں' : 'Choose app'}
         rtl={language === 'ur'}
         onPress={() => setShowApps(value => !value)}
       />
@@ -122,34 +122,17 @@ export function GuideEditorScreen({
                       setAppQuery('');
                     }}>
                     <Text style={styles.appOptionLabel} numberOfLines={1}>{app.label}</Text>
-                    <Text style={styles.appOptionPackage} numberOfLines={1}>{app.packageName}</Text>
                   </Pressable>
                 ))
               ) : (
                 <CopyText language={language} style={styles.hint}>
-                  {language === 'ur' ? 'کوئی ایپ نہیں ملی۔ نیچے دستی لکھیں۔' : 'No apps matched. Type details below.'}
+                  {language === 'ur' ? 'کوئی انسٹال شدہ ایپ نہیں ملی۔' : 'No installed apps matched your search.'}
                 </CopyText>
               )}
             </ScrollView>
           )}
         </View>
       ) : null}
-      <TextInput
-        value={appName}
-        onChangeText={setAppName}
-        placeholder={language === 'ur' ? 'ایپ کا نام' : 'App name'}
-        placeholderTextColor="#8A968C"
-        style={styles.input}
-      />
-      <TextInput
-        autoCapitalize="none"
-        autoCorrect={false}
-        value={appPackage}
-        onChangeText={setAppPackage}
-        placeholder="com.example.app"
-        placeholderTextColor="#8A968C"
-        style={styles.input}
-      />
       <TextInput
         value={title}
         onChangeText={setTitle}

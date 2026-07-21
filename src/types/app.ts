@@ -9,7 +9,7 @@ export type RootStack = {
   Home: undefined;
   Settings: undefined;
   Account: undefined;
-  Guides: undefined;
+  Guides: {initialTab?: 'mine' | 'community' | 'all'} | undefined;
   BuiltInGuides: undefined;
   VoiceTour: undefined;
   GuideEditor: undefined;

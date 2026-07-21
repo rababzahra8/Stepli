@@ -4,6 +4,8 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.view.Gravity
 import android.view.MotionEvent
@@ -24,6 +26,22 @@ object StepliOverlayService {
   private var ring: HighlightRingView? = null
   private var step: OverlayStep? = null
   private var speaker: GuidanceSpeaker? = null
+  private val mainHandler = Handler(Looper.getMainLooper())
+  private var pendingShow: Runnable? = null
+
+  /**
+   * Launching an app and drawing an overlay in the same instant can be unstable
+   * on a first launch. Wait for the target app to own the foreground, then draw.
+   */
+  fun showAfterAppLaunch(context: Context, nextStep: OverlayStep, delayMs: Long = 450) {
+    pendingShow?.let(mainHandler::removeCallbacks)
+    val scheduled = Runnable {
+      pendingShow = null
+      show(context.applicationContext, nextStep)
+    }
+    pendingShow = scheduled
+    mainHandler.postDelayed(scheduled, delayMs)
+  }
 
   @Suppress("DEPRECATION")
   fun show(context: Context, nextStep: OverlayStep) {
@@ -66,6 +84,13 @@ object StepliOverlayService {
       setTextColor(Color.rgb(110, 139, 114))
       textSize = 13f
     }, LinearLayout.LayoutParams(0, -2, 1f))
+    header.addView(TextView(context).apply {
+      text = "⠿"
+      textSize = 22f
+      gravity = Gravity.CENTER
+      setTextColor(Color.rgb(40, 68, 53))
+      contentDescription = "Drag this handle to move Stepli guidance"
+    }, LinearLayout.LayoutParams(dp(context, 32), dp(context, 36)))
     val minimize = TextView(context).apply {
       text = "−"
       textSize = 26f
@@ -79,8 +104,10 @@ object StepliOverlayService {
       textSize = 28f
       gravity = Gravity.CENTER
       setTextColor(Color.rgb(40, 68, 53))
-      contentDescription = "Close navigator completely"
-      setOnClickListener { closeNavigator() }
+      contentDescription = "Close guidance card. Tap the Stepli bubble to show it again."
+      // Keep the bubble, highlight, and current guide running so “close” means
+      // hide this dialog—not abandon the guide.
+      setOnClickListener { card.visibility = View.GONE }
     }
     header.addView(minimize, LinearLayout.LayoutParams(dp(context, 34), dp(context, 36)))
     header.addView(close, LinearLayout.LayoutParams(dp(context, 36), dp(context, 36)))
@@ -183,6 +210,8 @@ object StepliOverlayService {
 
   /** Fully stops the guide: card, bubble, highlight, active step, and voice. */
   fun closeNavigator() {
+    pendingShow?.let(mainHandler::removeCallbacks)
+    pendingShow = null
     removeViews()
     speaker?.shutdown()
     speaker = null

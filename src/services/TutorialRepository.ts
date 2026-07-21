@@ -154,6 +154,18 @@ class TutorialRepository {
     };
   }
 
+  /** RLS also enforces ownership; the owner filter makes the client intent explicit. */
+  async deleteGuide(guideId: string): Promise<void> {
+    const session = this.requireSession();
+    const config = await this.requireConfig();
+    const id = encodeURIComponent(guideId);
+    const ownerId = encodeURIComponent(session.userId);
+    await this.request(`${config.url}/rest/v1/tutorials?id=eq.${id}&owner_id=eq.${ownerId}`, {
+      method: 'DELETE',
+      headers: {Prefer: 'return=minimal'},
+    });
+  }
+
   private async auth(path: string, init: RequestInit): Promise<any> {
     const config = await this.requireConfig();
     const url = `${config.url}${path}`;

@@ -1,5 +1,5 @@
-import React from 'react';
-import {ActivityIndicator, Image, Pressable, ScrollView, Switch, Text, View} from 'react-native';
+import React, {useRef, useState} from 'react';
+import {ActivityIndicator, Animated, Image, Modal, Pressable, ScrollView, Switch, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {TutorialGuide} from '../models/tutorial';
 import {C} from '../theme/colors';
@@ -27,20 +27,33 @@ export function Button({
   busy = false,
 }: {
   label: string;
-  onPress: () => void;
+  onPress: () => void | Promise<void>;
   secondary?: boolean;
   danger?: boolean;
   disabled?: boolean;
   rtl?: boolean;
   busy?: boolean;
 }) {
+  const [pressing, setPressing] = useState(false);
+  const handlePress = async () => {
+    const result = onPress();
+    if (result && typeof (result as Promise<void>).then === 'function') {
+      setPressing(true);
+      try {
+        await result;
+      } finally {
+        setPressing(false);
+      }
+    }
+  };
+  const isBusy = busy || pressing;
   return (
     <Pressable
       accessibilityRole="button"
-      disabled={disabled || busy}
-      style={[styles.button, secondary && styles.secondary, danger && styles.danger, (disabled || busy) && styles.disabled]}
-      onPress={onPress}>
-      {busy ? (
+      disabled={disabled || isBusy}
+      style={[styles.button, secondary && styles.secondary, danger && styles.danger, (disabled || isBusy) && styles.disabled]}
+      onPress={handlePress}>
+      {isBusy ? (
         <ActivityIndicator color={secondary ? C.dark : '#fff'} />
       ) : (
         <Text style={[styles.buttonText, secondary && styles.secondaryText, danger && styles.dangerText, rtl && styles.rtl]}>{label}</Text>
@@ -54,24 +67,42 @@ export function LanguageSwitch({
   setLanguage,
 }: {
   language: Language;
-  setLanguage: (language: Language) => void;
+  setLanguage: (language: Language) => void | Promise<void>;
 }) {
+  const [open, setOpen] = useState(false);
+  const [changing, setChanging] = useState(false);
+  const choose = async (value: Language) => {
+    if (value === language) {
+      setOpen(false);
+      return;
+    }
+    setChanging(true);
+    try {
+      await setLanguage(value);
+    } finally {
+      setChanging(false);
+      setOpen(false);
+    }
+  };
   return (
-    <View style={styles.languageSwitch} accessibilityRole="tablist">
+    <View style={styles.languageSwitch}>
       <Pressable
         accessibilityRole="button"
-        accessibilityState={{selected: language === 'en'}}
-        style={[styles.languageChip, language === 'en' && styles.languageChipActive]}
-        onPress={() => setLanguage('en')}>
-        <Text style={[styles.languageChipText, language === 'en' && styles.languageChipTextActive]}>EN</Text>
+        accessibilityState={{expanded: open}}
+        style={styles.languagePickerButton}
+        onPress={() => setOpen(value => !value)}>
+        {changing ? <ActivityIndicator size="small" color={C.sage} /> : <Text style={styles.languageChipText}>{language === 'ur' ? 'اردو ▾' : 'English ▾'}</Text>}
       </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{selected: language === 'ur'}}
-        style={[styles.languageChip, language === 'ur' && styles.languageChipActive]}
-        onPress={() => setLanguage('ur')}>
-        <Text style={[styles.languageChipText, language === 'ur' && styles.languageChipTextActive, styles.rtl]}>اردو</Text>
-      </Pressable>
+      {open ? (
+        <View style={styles.languageMenu} accessibilityRole="menu">
+          <Pressable accessibilityRole="menuitem" style={styles.languageOption} onPress={() => void choose('en')}>
+            <Text style={styles.languageChipText}>English</Text>
+          </Pressable>
+          <Pressable accessibilityRole="menuitem" style={styles.languageOption} onPress={() => void choose('ur')}>
+            <Text style={[styles.languageChipText, styles.rtl]}>اردو</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -86,17 +117,11 @@ export function Screen({
   children: React.ReactNode;
   scroll?: boolean;
   language?: Language;
-  setLanguage?: (language: Language) => void;
-  /** When set, shows Back on the left of the language switch. */
+  setLanguage?: (language: Language) => void | Promise<void>;
+  /** Enables the Stepli sidebar when navigation is available. */
   navigation?: any;
 }) {
-  const header =
-    language && setLanguage ? (
-      <View style={styles.screenHeader}>
-        {navigation ? <Back navigation={navigation} language={language} /> : <View style={styles.flex} />}
-        <LanguageSwitch language={language} setLanguage={setLanguage} />
-      </View>
-    ) : null;
+  const header = <AppHeader language={language} setLanguage={setLanguage} navigation={navigation} />;
   const content = (
     <View style={styles.screen}>
       {header}
@@ -107,6 +132,80 @@ export function Screen({
     <SafeAreaView style={styles.safe}>
       {scroll ? <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>{content}</ScrollView> : content}
     </SafeAreaView>
+  );
+}
+
+function AppHeader({
+  language,
+  setLanguage,
+  navigation,
+}: {
+  language?: Language;
+  setLanguage?: (language: Language) => void | Promise<void>;
+  navigation?: any;
+}) {
+  const [menuVisible, setMenuVisible] = useState(false);
+  const drawerX = useRef(new Animated.Value(-360)).current;
+  const openMenu = () => {
+    drawerX.setValue(-360);
+    setMenuVisible(true);
+    Animated.timing(drawerX, {toValue: 0, duration: 220, useNativeDriver: true}).start();
+  };
+  const closeMenu = (afterClose?: () => void) => {
+    Animated.timing(drawerX, {toValue: -360, duration: 180, useNativeDriver: true}).start(() => {
+      setMenuVisible(false);
+      afterClose?.();
+    });
+  };
+  const openGuides = (initialTab: 'mine' | 'community' | 'all') => {
+    closeMenu(() => navigation?.navigate('Guides', {initialTab}));
+  };
+  return (
+    <>
+      <View style={styles.screenHeader}>
+        {navigation ? (
+          <Pressable accessibilityRole="button" accessibilityLabel={language === 'ur' ? 'مینو کھولیں' : 'Open menu'} onPress={openMenu}>
+            <BrandMark />
+          </Pressable>
+        ) : <BrandMark />}
+        {language && setLanguage ? <LanguageSwitch language={language} setLanguage={setLanguage} /> : <View />}
+      </View>
+      {navigation && language ? (
+        <Modal visible={menuVisible} transparent animationType="none" onRequestClose={() => closeMenu()}>
+          <View style={styles.menuOverlay}>
+            <Pressable style={styles.menuBackdrop} onPress={() => closeMenu()} />
+            <Animated.View style={[styles.sideMenu, {transform: [{translateX: drawerX}]}]}>
+              <View style={styles.sideMenuHeader}>
+                <BrandMark />
+                <Pressable accessibilityRole="button" accessibilityLabel={language === 'ur' ? 'مینو بند کریں' : 'Close menu'} onPress={() => closeMenu()}>
+                  <Text style={styles.menuClose}>×</Text>
+                </Pressable>
+              </View>
+              <Pressable accessibilityRole="button" style={styles.menuItem} onPress={() => closeMenu(() => navigation.navigate('Home'))}>
+                <CopyText language={language} style={styles.settingText}>{language === 'ur' ? 'ہوم' : 'Home'}</CopyText>
+                <Text style={styles.arrow}>›</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" style={styles.menuItem} onPress={() => openGuides('mine')}>
+                <CopyText language={language} style={styles.settingText}>{language === 'ur' ? 'میری گائیڈز' : 'My guides'}</CopyText>
+                <Text style={styles.arrow}>›</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" style={styles.menuItem} onPress={() => openGuides('community')}>
+                <CopyText language={language} style={styles.settingText}>{language === 'ur' ? 'کمیونٹی گائیڈز' : 'Community guides'}</CopyText>
+                <Text style={styles.arrow}>›</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" style={styles.menuItem} onPress={() => openGuides('all')}>
+                <CopyText language={language} style={styles.settingText}>{language === 'ur' ? 'تمام گائیڈز' : 'All guides'}</CopyText>
+                <Text style={styles.arrow}>›</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" style={styles.menuItem} onPress={() => closeMenu(() => navigation.navigate('Settings'))}>
+                <CopyText language={language} style={styles.settingText}>{language === 'ur' ? 'سیٹنگز' : 'Settings'}</CopyText>
+                <Text style={styles.arrow}>›</Text>
+              </Pressable>
+            </Animated.View>
+          </View>
+        </Modal>
+      ) : null}
+    </>
   );
 }
 
@@ -209,11 +308,20 @@ export function AppGuideGroupCard({
   );
 }
 
-export function SettingRow({label, value, setValue, language}: {label: string; value: boolean; setValue: (value: boolean) => void; language: Language}) {
+export function SettingRow({label, value, setValue, language}: {label: string; value: boolean; setValue: (value: boolean) => void | Promise<void>; language: Language}) {
+  const [saving, setSaving] = useState(false);
+  const update = async (next: boolean) => {
+    setSaving(true);
+    try {
+      await setValue(next);
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
     <View style={styles.setting}>
       <CopyText language={language}>{label}</CopyText>
-      <Switch value={value} onValueChange={setValue} trackColor={{true: C.sage}} />
+      {saving ? <ActivityIndicator size="small" color={C.sage} /> : <Switch value={value} onValueChange={update} trackColor={{true: C.sage}} />}
     </View>
   );
 }

@@ -26,7 +26,7 @@ export function OnboardingScreen({
     navigation.replace('Home');
   };
   return (
-    <Screen language={language} setLanguage={setLanguage}>
+    <Screen language={language} setLanguage={setLanguage} navigation={navigation}>
       <CopyText language={language} style={styles.eyebrow}>{page} / 2</CopyText>
       <CopyText language={language} style={styles.title}>{item.headline}</CopyText>
       <CopyText language={language} style={styles.body}>{item.body}</CopyText>

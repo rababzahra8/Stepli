@@ -25,6 +25,7 @@ type Overlay = {
   setVoiceGuidance(enabled: boolean): Promise<void>;
   getLaunchableApps(): Promise<InstalledApp[]>;
   launchApp(packageName: string): Promise<boolean>;
+  launchAppAndShowStep(id: string, text: string, confirm: string, progress: string, matcher: string, appPackage: string, language: 'en' | 'ur', spokenText?: string, canGoBack?: boolean): Promise<boolean>;
   /** Kept for older callers; new tutorials use launchApp. */
   launchFoodpanda(): Promise<boolean>;
   showStep(id: string, text: string, confirm: string, progress: string, matcher: string, appPackage: string, language: 'en' | 'ur', spokenText?: string, canGoBack?: boolean): Promise<void>;

@@ -23,10 +23,10 @@ export function SettingsScreen({
 }) {
   const c = copyFor(language);
   const [voice, setVoice] = useState(true);
-  const [large, setLarge] = useState(false);
   const [busy, setBusy] = useState(false);
   const [ttsLanguages, setTtsLanguages] = useState<TtsLanguageStatus[]>([]);
   const [checkingVoices, setCheckingVoices] = useState(false);
+  const [voiceListOpen, setVoiceListOpen] = useState(false);
 
   const refreshTtsLanguages = useCallback(async () => {
     setCheckingVoices(true);
@@ -77,30 +77,28 @@ export function SettingsScreen({
   return (
     <Screen scroll language={language} setLanguage={setLanguage} navigation={navigation}>
       <CopyText language={language} style={styles.title}>{c.settings.title}</CopyText>
-      <CopyText language={language} style={styles.settingLabel}>{c.settings.language}</CopyText>
-      <Pressable style={styles.setting} onPress={() => setLanguage('en')}>
-        <Text style={styles.settingText}>English</Text>
-        {language === 'en' ? <Text style={styles.active}>{c.settings.selected}</Text> : null}
-      </Pressable>
-      <Pressable style={styles.setting} onPress={() => setLanguage('ur')}>
-        <CopyText language="ur" style={styles.settingText}>اردو</CopyText>
-        {language === 'ur' ? <CopyText language="ur" style={styles.active}>{c.settings.selected}</CopyText> : null}
-      </Pressable>
+      <CopyText language={language} style={styles.hint}>
+        {language === 'ur' ? 'ایپ کی زبان اوپر دائیں جانب موجود ڈراپ ڈاؤن سے بدلیں۔' : 'Change the app language with the dropdown at the top right.'}
+      </CopyText>
       <SettingRow language={language} label={c.settings.voice} value={voice} setValue={updateVoice} />
-      <SettingRow language={language} label={c.settings.textSize} value={large} setValue={setLarge} />
 
       <CopyText language={language} style={styles.settingLabel}>
-        {language === 'ur' ? 'آواز کی زبانیں' : 'Voice languages'}
+        {language === 'ur' ? 'آواز کی حالت' : 'Voice status'}
       </CopyText>
       <CopyText language={language} style={styles.hint}>
         {language === 'ur'
-          ? 'نوٹ: Speech recognition الگ چیز ہے۔ Samsung TTS میں اکثر اردو نہیں ہوتی — Preferred engine کو Google Text-to-speech بنائیں، پھر Urdu (Pakistan) ڈاؤن لوڈ کریں۔'
-          : 'Note: Speech recognition is different. Samsung TTS often has no Urdu — set Preferred engine to Google Text-to-speech, then download Urdu (Pakistan).'}
+          ? 'یہ زبان منتخب کرنے کی فہرست نہیں ہے۔ یہ صرف بتاتی ہے کہ آپ کے فون میں کون سی بولنے والی آوازیں تیار ہیں۔ “تیار” کو دبانے کی ضرورت نہیں۔'
+          : 'This is not a language picker. It only checks which spoken voices are ready on your phone. “Ready” is information, not a button.'}
       </CopyText>
-      {checkingVoices ? (
-        <Loader language={language} label={language === 'ur' ? 'چیک ہو رہا ہے…' : 'Checking voices…'} />
-      ) : (
-        <View style={styles.notice}>
+      <Pressable accessibilityRole="button" style={styles.setting} onPress={() => setVoiceListOpen(open => !open)}>
+        <CopyText language={language} style={styles.settingText}>
+          {language === 'ur' ? 'دستیاب آوازیں دیکھیں' : 'Show available voices'}
+        </CopyText>
+        <Text style={styles.arrow}>{voiceListOpen ? '⌃' : '⌄'}</Text>
+      </Pressable>
+      {voiceListOpen ? (
+        checkingVoices ? <Loader language={language} label={language === 'ur' ? 'چیک ہو رہا ہے…' : 'Checking voices…'} /> : (
+          <View style={styles.notice}>
           {stepliVoices.map(item => (
             <View key={item.code} style={styles.setting}>
               <View style={styles.flex}>
@@ -144,13 +142,14 @@ export function SettingsScreen({
                 : 'Could not read voice list. Open settings below to install voices.'}
             </CopyText>
           ) : null}
-        </View>
-      )}
+          </View>
+        )
+      ) : null}
       <Button
         secondary
         label={language === 'ur' ? 'دوبارہ چیک کریں' : 'Check again'}
         rtl={language === 'ur'}
-        onPress={() => void refreshTtsLanguages()}
+        onPress={refreshTtsLanguages}
       />
       <Button
         secondary
